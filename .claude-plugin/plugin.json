@@ -1,0 +1,11 @@
+{
+  "name": "requirements-gatherer",
+  "version": "1.0.0",
+  "description": "Requirements gathering interview and issue creation workflow. Includes two skills: a senior product consultant that interviews users to produce structured requirements, and an organizer that converts reviewed requirements into GitHub milestones/issues or Jira epics/stories.",
+  "author": {
+    "name": "Chris Kostakis"
+  },
+  "repository": "https://github.com/thekostakis/requirements-gatherer",
+  "license": "MIT",
+  "keywords": ["requirements", "product", "interview", "github-issues", "jira", "epics", "backlog"]
+}
