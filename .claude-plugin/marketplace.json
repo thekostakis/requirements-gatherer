@@ -11,7 +11,7 @@
       "name": "requirements-gatherer",
       "source": "./plugins/requirements-gatherer",
       "description": "Requirements gathering interview and issue creation workflow. A senior product consultant interviews users to produce structured requirements, then an organizer converts reviewed requirements into GitHub milestones/issues or Jira epics/stories.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Chris Kostakis"
       },
