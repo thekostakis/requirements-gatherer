@@ -1,0 +1,24 @@
+{
+  "name": "functional-design-tools",
+  "owner": {
+    "name": "Chris Kostakis"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for product design and project planning workflows"
+  },
+  "plugins": [
+    {
+      "name": "requirements-gatherer",
+      "source": "./plugins/requirements-gatherer",
+      "description": "Requirements gathering interview and issue creation workflow. A senior product consultant interviews users to produce structured requirements, then an organizer converts reviewed requirements into GitHub milestones/issues or Jira epics/stories.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Chris Kostakis"
+      },
+      "repository": "https://github.com/thekostakis/requirements-gatherer",
+      "license": "MIT",
+      "keywords": ["requirements", "product", "interview", "github-issues", "jira", "epics", "backlog"],
+      "category": "productivity"
+    }
+  ]
+}

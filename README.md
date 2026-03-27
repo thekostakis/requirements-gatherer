@@ -32,11 +32,19 @@ Reads a reviewed `requirements.md` and creates structured epics and issues in Gi
 
 ## Installation
 
+**Step 1:** Add the marketplace:
+
 ```
-/plugin install thekostakis/requirements-gatherer
+/plugin marketplace add thekostakis/requirements-gatherer
 ```
 
-Then reload:
+**Step 2:** Install the plugin:
+
+```
+/plugin install requirements-gatherer@functional-design-tools
+```
+
+**Step 3:** Reload:
 
 ```
 /reload-plugins
