@@ -549,8 +549,43 @@ during site extraction and confirmed during interview.
 
 ## Responsive System
 
+[Use the FLUID format if the user chose fluid (recommended default).
+Use the BREAKPOINT format only if the user explicitly chose breakpoints.]
+
+### FLUID FORMAT:
+
 ### Approach
-[Mobile-first / Desktop-first / Hybrid. 1-2 sentences on the responsive philosophy.]
+Fluid responsive. Typography and spacing scale continuously using clamp().
+Layout shifts use minimal breakpoints only where structural changes are needed
+(e.g., sidebar visibility, navigation pattern change).
+
+### Fluid Scales
+| Token | Min (mobile) | Preferred | Max (desktop) |
+|-------|-------------|-----------|---------------|
+| font-size-base | Xrem | Xvw + Xrem | Xrem |
+| font-size-lg | Xrem | Xvw + Xrem | Xrem |
+| font-size-xl | Xrem | Xvw + Xrem | Xrem |
+| spacing-sm | Xrem | Xvw | Xrem |
+| spacing-md | Xrem | Xvw | Xrem |
+| spacing-lg | Xrem | Xvw | Xrem |
+
+### Layout Breakpoints (structural changes only)
+| Token | Value | What Changes |
+|-------|-------|-------------|
+| bp-nav | Xpx | Navigation switches from hamburger to horizontal |
+| bp-sidebar | Xpx | Sidebar becomes visible |
+| bp-columns | Xpx | Grid shifts from 1 to multi-column |
+
+### Responsive Patterns
+- **Grid strategy:** [CSS Grid / Flexbox / both]
+- **Stacking behavior:** [How multi-column layouts collapse]
+- **Touch targets:** [Minimum tap target size]
+- **Container queries:** [If used, which components use them and why]
+
+### BREAKPOINT FORMAT (only if user chose breakpoints):
+
+### Approach
+[Mobile-first / Desktop-first. 1-2 sentences on the responsive philosophy.]
 
 ### Breakpoints
 | Token | Value | Description |
@@ -654,6 +689,20 @@ Each file in `design/components/[component-name].md`:
 - **Keyboard:** [Tab to focus, Enter/Space to activate]
 - **Screen reader:** [aria-label pattern, announcements]
 - **Contrast:** [Meets AA for all states]
+
+## Data Fields
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| [field name] | [string/number/boolean/enum(...)/object] | [yes/no] | [What this field controls] |
+
+## Usage & Content
+- **When to use:** [1-2 sentences on when this component is the right choice. Include what
+  it is NOT for — name the alternative component.]
+- **Typical content:** [What kind of content this component usually holds — text length,
+  media, interactive elements.]
+- **Common contexts:** [Where in an app this component typically appears.]
+- **Related components:** [Comma-separated list of component names that serve similar
+  purposes or are commonly used alongside this one.]
 
 ## Responsive Behavior
 | Breakpoint | Changes |
