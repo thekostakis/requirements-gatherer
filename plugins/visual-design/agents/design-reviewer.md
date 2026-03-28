@@ -156,23 +156,32 @@ three categories:
     duration when design system max is 400ms), flag as BLOCKING
 
 **Category E: Responsive Behavior**
-- Read the Responsive System section from `design-guidelines.md` to get the project's
-  defined breakpoints. If no breakpoints are defined, use defaults: 375px, 768px,
-  1024px, 1440px.
+- Read the Responsive System section from `design-guidelines.md`.
+- Determine which approach the project uses:
+  - **Fluid:** Look for a "Fluid Scales" section. Test by verifying that font sizes and
+    spacing change continuously across viewports (not in discrete jumps). At each test
+    viewport, assert that computed font-size/padding values fall within the min/max range
+    defined in the Fluid Scales table.
+  - **Breakpoint-based:** Look for a "Breakpoints" section with discrete values. Test
+    layout changes at each defined breakpoint.
+  - If no responsive section exists, use default test viewports: 375px, 768px, 1024px,
+    1440px.
 - Read the component's Responsive Behavior table from its compendium spec.
-- For each breakpoint, set the Playwright viewport and verify:
+- For each test viewport, set the Playwright viewport and verify:
   - Layout changes match the spec (e.g., columns collapse, sidebar hides)
-  - No horizontal overflow or content clipping at any breakpoint
-  - Touch targets are at least 44x44px at mobile breakpoints
+  - No horizontal overflow or content clipping at any viewport
+  - Touch targets are at least 44x44px at mobile viewports
   - Text remains readable (no truncation without ellipsis, no overlap)
   - Navigation adapts as specified (hamburger appears, horizontal nav collapses)
+  - **Fluid-specific:** If the project uses fluid responsive, verify that computed
+    values at 375px and 1440px fall within the min/max bounds of the Fluid Scales table.
+    Flag as BLOCKING if a value exceeds its defined range.
 - Playwright viewport setting:
   ```typescript
   await page.setViewportSize({ width: 375, height: 812 });
   ```
-- Take a screenshot at each breakpoint for visual comparison
+- Take a screenshot at each viewport for visual comparison
 - Assert CSS property values at each viewport match what the design system specifies
-  for that breakpoint range
 
 ### Step 4: Run Tests
 
@@ -197,6 +206,7 @@ Capture output. Parse results into blocking and low issues.
 - Content unreadable (overlapping text, truncated without ellipsis) at any breakpoint
 - Animation duration/easing contradicts design system motion tokens
 - Missing `prefers-reduced-motion` support on any animated element
+- Fluid scale value outside defined min/max range at any tested viewport
 
 **LOW issues (reported, don't block):**
 - Subjective visual appeal suggestions (with explanation)
@@ -209,6 +219,7 @@ Capture output. Parse results into blocking and low issues.
 - Custom component has animation but no compendium entry documenting it
 - Undocumented animation on a component (works but not in spec)
 - Animation that could use a reusable motion pattern instead of one-off values
+- Fluid scales defined but component uses fixed pixel values instead of clamp()
 
 Report format:
 ```
