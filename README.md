@@ -63,20 +63,24 @@ Establishes a project's visual design system through plain-language interview or
 - Generates per-component spec files in design/components/
 - Supports addendum mode to update existing design systems
 
-### component-context (agent)
+### component-context
 
-Fires automatically when frontend component work is detected. Loads the relevant component spec from the compendium into context so Claude has exact measurements, states, animations, and variants without loading everything.
+Loads the relevant component spec from the design compendium into context when implementing frontend components. Supports fuzzy matching — if no exact spec exists, suggests similar components ranked by relevance.
 
-### design-reviewer (agent)
+**Trigger phrases:** "load component spec", "component design spec", "what does the design say about [component]", "design spec for [component]"
 
-Senior creative director quality gate. Maintains Storybook, writes Playwright visual tests and axe accessibility audits, runs in a loop with the implementing agent until zero blocking issues.
+### design-reviewer
+
+Senior creative director quality gate. Verifies implemented components match the design system through Storybook stories, Playwright visual tests, and axe accessibility audits.
+
+**Trigger phrases:** "review component", "design review", "check against design system", "visual review", "run design tests"
 
 **What it does:**
 - Checks all required tools before starting (Playwright, Storybook, axe-core) — never silently degrades
 - Creates/maintains Storybook stories for all components
-- Writes Playwright tests: screenshot comparison, CSS assertions, motion verification, axe audits
+- Writes Playwright tests: screenshot comparison, CSS assertions, motion verification, responsive behavior, axe audits
 - Categorizes issues as blocking (must fix) or low (informational)
-- Loops with implementing agent up to 3 cycles, then escalates to user
+- Fixes blocking issues and re-runs up to 3 cycles, then escalates to user
 
 ## Workflow
 
@@ -95,11 +99,10 @@ Later, when scope changes:
 ## Visual Design Workflow
 
 ```
-1. Run visual-design-consultant     →  design-guidelines.md + design/components/
-2. Add reference to CLAUDE.md       →  (permanent design context)
-3. Implement components              →  component-context agent auto-loads specs
-4. Design reviewer runs automatically →  Storybook stories + Playwright tests
-5. Fix/iterate until pass            →  (quality gate loop)
+1. Run visual-design-consultant     →  design-guidelines.md + design/components/ + CLAUDE.md updated
+2. Implement components              →  component-context skill loads specs automatically
+3. Run design-reviewer               →  Storybook stories + Playwright tests
+4. Fix/iterate until pass            →  (quality gate loop)
 ```
 
 ## Installation
@@ -175,7 +178,7 @@ Update an existing design system with new components or changes:
 > add a pricing table component to the design system
 ```
 
-The consultant produces `design-guidelines.md` and component specs in `design/components/`. After that, the component-context agent auto-loads specs when you implement components, and the design-reviewer agent runs quality gate tests automatically.
+The consultant produces `design-guidelines.md` and component specs in `design/components/`, and adds skill triggers to your CLAUDE.md. After that, the component-context skill loads specs when you implement components, and the design-reviewer skill runs quality gate tests.
 
 ## License
 

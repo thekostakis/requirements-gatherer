@@ -23,7 +23,7 @@
     {
       "name": "visual-design",
       "source": "./plugins/visual-design",
-      "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, component-context agent with fuzzy matching for on-demand spec delivery, and design reviewer agent for visual quality gate testing with Playwright, Storybook, and axe-core.",
+      "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, and fluid responsive detection. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill for visual quality gate testing with Playwright, Storybook, and axe-core.",
       "version": "1.2.0",
       "author": {
         "name": "Chris Kostakis"

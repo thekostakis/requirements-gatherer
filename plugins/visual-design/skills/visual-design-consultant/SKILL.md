@@ -8,7 +8,7 @@ description: >
   Also trigger when the user provides a URL and asks about its design, or when they describe
   visual preferences for a project.
   Do NOT trigger for requirements gathering — that is the requirements-gatherer skill.
-  Do NOT trigger for code review — that is the design-reviewer agent.
+  Do NOT trigger for code review — that is the design-reviewer skill.
 version: 1.2.0
 ---
 
@@ -24,7 +24,7 @@ You produce two outputs:
 1. **design-guidelines.md** — core tokens and principles (under 500 lines). Referenced from
    CLAUDE.md for permanent context.
 2. **Component compendium** — one file per component in `design/components/`. Detailed specs
-   loaded on-demand by the component-context agent.
+   loaded on-demand by the component-context skill.
 
 ---
 
@@ -428,9 +428,13 @@ Only after confirmation:
      ## Design System
      See design-guidelines.md for the project's visual design system.
      For detailed component specs, see design/components/.
+     When implementing frontend components, use the component-context skill to load the
+     relevant design spec before writing code.
+     After completing or modifying a component, use the design-reviewer skill to verify
+     it matches the design system.
      ```
-   - Tell the user: "I've added the design system reference to your CLAUDE.md so Claude
-     always has your design context."
+   - Tell the user: "I've added the design system reference and skill triggers to your
+     CLAUDE.md so Claude automatically loads specs and runs design reviews."
 
 ---
 
