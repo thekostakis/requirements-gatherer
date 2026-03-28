@@ -24,7 +24,7 @@
       "name": "visual-design",
       "source": "./plugins/visual-design",
       "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, and fluid responsive detection. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill for live visual quality gate testing via Chrome browser inspection. Functional-tester skill for Playwright page-level functional tests.",
-      "version": "1.3.0",
+      "version": "2.0.0",
       "author": {
         "name": "Chris Kostakis"
       },
