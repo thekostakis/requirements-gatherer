@@ -153,10 +153,29 @@ axe.run(document.querySelector('SELECTOR') || document, {
 }))
 ~~~
 
-3. If CDN injection fails: **STOP.** Present alternatives:
-   - "The axe-core CDN is blocked. Options:"
-   - "1. Install axe-core locally: `npm install -D axe-core`, then I will load it from node_modules."
-   - "2. Allow CDN access to cdnjs.cloudflare.com and retry."
+3. If CDN injection fails: auto-install axe-core from npm and load locally:
+
+~~~bash
+npm install -D axe-core
+~~~
+
+   Then read the axe-core source and inject it inline:
+
+   - Use the Read tool to read `node_modules/axe-core/axe.min.js`
+   - Use `mcp__claude-in-chrome__javascript_tool` to inject the contents directly:
+
+~~~javascript
+(() => {
+  if (window.axe) return 'already loaded';
+  // [paste axe.min.js contents here — the Read tool output]
+  return 'loaded from local install';
+})()
+~~~
+
+   If npm install also fails: **STOP.** Present alternatives:
+   - "axe-core could not be loaded from CDN or installed via npm."
+   - "1. Allow CDN access to cdnjs.cloudflare.com and retry."
+   - "2. Install manually: `npm install -D axe-core` and retry."
    - "3. Skip accessibility scan (NOT recommended -- accessibility is a core quality requirement)."
    - Do NOT proceed without the user's decision.
 
