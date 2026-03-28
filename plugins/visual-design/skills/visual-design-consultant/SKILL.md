@@ -419,7 +419,23 @@ Only after confirmation:
 1. Write `design-guidelines.md` to the working directory root.
 2. Create `design/components/` directory.
 3. Write one file per component identified.
-4. Add design context to CLAUDE.md automatically:
+4. Generate `design/components/index.md`:
+   - For each component spec just written, extract: component name (filename without .md),
+     category (from Usage & Content, one of: feedback, action, navigation, layout, overlay,
+     data-display, form, media, or "uncategorized"), related components (from "Related
+     components" field, comma-separated), and keywords (up to 8 distinctive words from
+     "When to use" and "Common contexts").
+   - Sort alphabetically by component name.
+   - Write the index file:
+     ```
+     # Component Index
+
+     | Component | Category | Related | Keywords |
+     |-----------|----------|---------|----------|
+     | [name] | [category] | [related] | [keywords] |
+     ```
+   - Tell the user: "Generated component index with [N] components."
+5. Add design context to CLAUDE.md automatically:
    - If CLAUDE.md exists: read it, check if it already references `design-guidelines.md`.
      If not, append a blank line and the reference block below to the end of the file.
    - If CLAUDE.md does not exist: create it with the standard header and the reference block.
