@@ -7,8 +7,9 @@ description: >
   fires after implementation steps complete when the work involves a testable page or
   visual flow — similar to how superpowers:code-reviewer fires after major steps.
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
-  for non-visual/backend-only code.
-version: 1.0.0
+  for non-visual/backend-only code. Includes Lighthouse CI audits for accessibility,
+  performance, and SEO.
+version: 1.1.0
 ---
 
 # Functional Tester
@@ -57,7 +58,26 @@ If no dev server is detected: **STOP.** Tell the user:
 - "Please start your dev server and tell me the URL, or say 'retry' once it is running."
 - Do NOT proceed without a confirmed dev server URL.
 
-**STOP: BOTH checks must pass before proceeding.**
+### Check 3: Lighthouse
+
+~~~bash
+npx lighthouse --version 2>/dev/null || echo "MISSING"
+~~~
+
+If Lighthouse is NOT installed: auto-install it:
+
+~~~bash
+npm install -g lighthouse
+~~~
+
+Re-check after install. If the install fails (permissions, network): **STOP.** Tell the user:
+
+- "Lighthouse could not be auto-installed."
+- "To install manually: `npm install -g lighthouse` (or with sudo if needed)"
+- "Retry: Say 'retry' after installing."
+- Do NOT proceed to the Lighthouse audit step without Lighthouse, but functional tests (Steps 2-5) can still run.
+
+**STOP: Checks 1 and 2 must pass before proceeding. Check 3 is needed for the Lighthouse audit in Step 6 but does not block functional tests.**
 
 ---
 
@@ -151,15 +171,6 @@ ls -d tests/ e2e/ __tests__/ test/ 2>/dev/null
 
 2. If no existing tests are found, default to: `e2e/[page-name].spec.ts`
 
-### Check for Accessibility Testing Support
-
-~~~bash
-npm ls @axe-core/playwright 2>/dev/null
-~~~
-
-If `@axe-core/playwright` is installed, include accessibility checks in the tests.
-If not installed, skip accessibility assertions (do not fail or block on this).
-
 ### Write the Test File
 
 Create `[test-dir]/[page-name].spec.ts` (or `.js` to match project conventions).
@@ -187,7 +198,6 @@ Structure the test file with:
   `expect(page).toHaveURL()`, etc.
 - Proper `await` on all Playwright calls.
 - Reasonable timeouts for navigation and animations.
-- If `@axe-core/playwright` is available, add an accessibility test using `AxeBuilder`.
 
 Example test structure (adapt to actual page):
 
@@ -255,7 +265,7 @@ npx playwright test [test-file] --reporter=list
 
 ### If ALL Tests PASS
 
-Report results (proceed to Step 6). Done.
+Proceed to Step 6 (Lighthouse Audit), then Step 7 (Report Results).
 
 ### If Tests FAIL
 
@@ -316,7 +326,130 @@ has an actual bug (wrong selector, wrong URL, race condition, typo in expected t
 
 ---
 
-## Step 6: Report Results
+## Step 6: Lighthouse Audit
+
+After the Playwright functional tests complete (pass or escalate), run a Lighthouse audit
+on the page for accessibility, performance, and SEO quality.
+
+### 6a: Detect Login State
+
+Use `mcp__claude-in-chrome__javascript_tool` to check if the page is behind authentication:
+
+~~~javascript
+(() => {
+  const loginSignals = [
+    document.querySelector('input[type="password"]'),
+    document.querySelector('form[action*="login"]'),
+    document.querySelector('form[action*="signin"]'),
+    document.querySelector('[data-testid*="login"]'),
+    document.querySelector('[data-testid*="signin"]'),
+  ].filter(Boolean);
+  const urlSignals = /\/(login|signin|sign-in|auth)\b/i.test(window.location.href);
+  return {
+    behindLogin: loginSignals.length > 0 || urlSignals,
+    signals: loginSignals.map(el => el.tagName + (el.type ? '[type=' + el.type + ']' : ''))
+  };
+})()
+~~~
+
+If `behindLogin` is true: exclude the `seo` category from Lighthouse. Search engines cannot
+crawl authenticated pages, so SEO results would be misleading.
+
+### 6b: Run Lighthouse
+
+Determine which categories to audit:
+
+~~~bash
+# If NOT behind login:
+npx lighthouse [PAGE_URL] \
+  --output=json \
+  --output-path=./lighthouse-report.json \
+  --chrome-flags="--headless --no-sandbox" \
+  --only-categories=accessibility,performance,seo \
+  --quiet
+
+# If behind login (no SEO):
+npx lighthouse [PAGE_URL] \
+  --output=json \
+  --output-path=./lighthouse-report.json \
+  --chrome-flags="--headless --no-sandbox" \
+  --only-categories=accessibility,performance \
+  --quiet
+~~~
+
+Parse the JSON output to extract scores and critical failures:
+
+~~~bash
+node -e "
+  const r = JSON.parse(require('fs').readFileSync('./lighthouse-report.json', 'utf8'));
+  const cats = r.categories;
+  const audits = r.audits;
+  const critical = Object.values(audits)
+    .filter(a => a.score !== null && a.score === 0)
+    .map(a => ({ id: a.id, title: a.title, score: a.score, description: a.description }));
+  const warnings = Object.values(audits)
+    .filter(a => a.score !== null && a.score > 0 && a.score < 0.5)
+    .map(a => ({ id: a.id, title: a.title, score: a.score }));
+  console.log(JSON.stringify({
+    scores: {
+      accessibility: Math.round((cats.accessibility?.score || 0) * 100),
+      performance: Math.round((cats.performance?.score || 0) * 100),
+      seo: cats.seo ? Math.round(cats.seo.score * 100) : 'N/A (behind login)'
+    },
+    critical: critical.slice(0, 15),
+    warnings: warnings.slice(0, 10)
+  }, null, 2));
+"
+~~~
+
+Clean up the report file:
+
+~~~bash
+rm -f ./lighthouse-report.json
+~~~
+
+### 6c: Best-Effort Fix Loop for Critical Issues
+
+Review all critical Lighthouse audit failures (score = 0) and attempt fixes.
+
+**Accessibility fixes:**
+- Missing `lang` attribute on `<html>` → add it
+- Missing meta viewport → add `<meta name="viewport" content="width=device-width, initial-scale=1">`
+- Missing document title → add `<title>` tag
+- Broken heading hierarchy (skipped levels) → fix heading levels
+- Missing image alt text → add descriptive `alt` attributes
+- Missing form labels → add `<label>` elements or `aria-label` attributes
+- Low contrast text → adjust colors (reference design-guidelines.md tokens if available)
+
+**Performance fixes:**
+- Images missing width/height → add explicit dimensions
+- Below-fold images without lazy loading → add `loading="lazy"`
+- Render-blocking scripts → add `defer` or `async` attributes
+- Missing meta viewport (also performance) → add the tag
+- Large uncompressed assets → note in report (cannot fix at source level)
+
+**SEO fixes (only if NOT behind login):**
+- Missing meta description → add `<meta name="description" content="...">`
+- Missing canonical link → add `<link rel="canonical" href="...">`
+- Non-crawlable links → fix `href` attributes
+- Bad heading hierarchy → fix structure (same fix as accessibility)
+
+**Fix cycle:**
+1. Apply all fixable issues in one batch.
+2. Re-run Lighthouse with the same categories.
+3. Compare scores — note improvements.
+4. If new critical issues emerged or fixes broke something, apply another round.
+
+**Maximum 2 fix cycles** for Lighthouse issues. This is a separate budget from the
+Playwright test loop's 3 cycles. After 2 cycles, include remaining issues in the report
+as "noted — remediation needed" with specific instructions.
+
+**NEVER fix issues by removing content or functionality.** Only add missing attributes,
+tags, meta elements, or optimizations.
+
+---
+
+## Step 7: Report Results
 
 Present the final report using this format:
 
@@ -342,6 +475,20 @@ Present the final report using this format:
 
 ### Next Steps
 - [any follow-up actions needed]
+
+### Lighthouse Audit
+
+| Category | Score | Status |
+|----------|-------|--------|
+| Accessibility | XX/100 | PASS (≥90) / WARN (50-89) / FAIL (<50) |
+| Performance | XX/100 | PASS / WARN / FAIL |
+| SEO | XX/100 or N/A | PASS / WARN / FAIL / Skipped (behind login) |
+
+#### Critical Issues Fixed
+- [file:line] — [what was changed and why]
+
+#### Issues Not Fixed (remediation needed)
+- **[audit-id]:** [description] — [remediation instructions]
 ~~~
 
 ---
@@ -362,3 +509,9 @@ Present the final report using this format:
 7. This skill writes **FUNCTIONAL tests** (page-level, end-to-end). For unit tests, use
    superpowers:test-driven-development. For design system compliance, use the
    design-reviewer skill.
+8. **NEVER run SEO audits on pages behind authentication.** Search engines cannot crawl
+   authenticated pages, making SEO scores misleading.
+9. **NEVER fix Lighthouse issues by removing content or functionality.** Only add missing
+   attributes, tags, meta elements, or optimizations.
+10. **Lighthouse fix cycles (max 2) are separate from Playwright test fix cycles (max 3).**
+    Each has its own budget.
