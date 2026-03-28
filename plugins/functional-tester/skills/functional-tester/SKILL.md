@@ -7,9 +7,9 @@ description: >
   fires after implementation steps complete when the work involves a testable page or
   visual flow — similar to how superpowers:code-reviewer fires after major steps.
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
-  for non-visual/backend-only code. Includes Lighthouse CI audits for accessibility,
+  for non-visual/backend-only code. Includes Lighthouse CI and axe CLI audits for accessibility,
   performance, and SEO.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Functional Tester
@@ -82,7 +82,26 @@ Re-check after install. If the install fails (permissions, network): **STOP.** T
 - "Retry: Say 'retry' after installing."
 - Do NOT proceed to the Lighthouse audit step without Lighthouse, but functional tests (Steps 2-5) can still run.
 
-**STOP: Checks 1 and 2 must pass before proceeding. Check 3 is needed for the Lighthouse audit in Step 6 but does not block functional tests.**
+### Check 4: axe CLI
+
+~~~bash
+npx axe --version 2>/dev/null || echo "MISSING"
+~~~
+
+If axe CLI is NOT installed: auto-install it:
+
+~~~bash
+npm install -g @axe-core/cli
+~~~
+
+Re-check after install. If the install fails (permissions, network): **STOP.** Tell the user:
+
+- "axe CLI could not be auto-installed."
+- "To install manually: `npm install -g @axe-core/cli` (or with sudo if needed)"
+- "Retry: Say 'retry' after installing."
+- Do NOT proceed to the axe audit step without axe CLI, but functional tests (Steps 2-5) and Lighthouse (Step 6) can still run.
+
+**STOP: Checks 1 and 2 must pass before proceeding. Checks 3 and 4 are needed for the audit steps but do not block functional tests.**
 
 ---
 
@@ -270,7 +289,7 @@ npx playwright test [test-file] --reporter=list
 
 ### If ALL Tests PASS
 
-Proceed to Step 6 (Lighthouse Audit), then Step 7 (Report Results).
+Proceed to Step 6 (Lighthouse Audit), then Step 7 (axe Audit), then Step 8 (Report Results).
 
 ### If Tests FAIL
 
@@ -454,7 +473,72 @@ tags, meta elements, or optimizations.
 
 ---
 
-## Step 7: Report Results
+## Step 7: axe Accessibility Audit
+
+After the Lighthouse audit, run a dedicated WCAG accessibility scan using axe CLI for
+deeper coverage. axe and Lighthouse overlap on some checks but each catches issues the
+other misses.
+
+### 7a: Run axe CLI
+
+~~~bash
+npx axe [PAGE_URL] --tags wcag2a,wcag2aa --reporter json > ./axe-report.json 2>&1
+~~~
+
+Parse the JSON output:
+
+~~~bash
+node -e "
+  const r = JSON.parse(require('fs').readFileSync('./axe-report.json', 'utf8'));
+  const violations = (r[0]?.violations || []).map(v => ({
+    id: v.id, impact: v.impact, description: v.description,
+    nodes: v.nodes.slice(0, 5).map(n => ({ html: n.html?.slice(0, 200), target: n.target }))
+  }));
+  const passes = r[0]?.passes?.length || 0;
+  console.log(JSON.stringify({ violations, passes, total: violations.length }, null, 2));
+"
+~~~
+
+Clean up the report file:
+
+~~~bash
+rm -f ./axe-report.json
+~~~
+
+### 7b: Best-Effort Fix Loop for axe Violations
+
+Review all WCAG violations and attempt fixes, prioritizing by impact (critical > serious > moderate > minor):
+
+**Common fixes:**
+- Missing alt text → add descriptive `alt` attributes
+- Missing form labels → add `<label>` elements or `aria-label`
+- Missing landmark roles → add `role` or use semantic HTML (`<main>`, `<nav>`, `<header>`)
+- Color contrast → adjust colors (reference design-guidelines.md tokens if available)
+- Missing lang attribute → add `lang` to `<html>`
+- Empty buttons/links → add text content or `aria-label`
+- Duplicate IDs → make IDs unique
+- Missing heading hierarchy → fix heading levels
+
+**Fix cycle:**
+1. Apply all fixable issues in one batch.
+2. Re-run axe CLI with the same flags.
+3. Compare violation counts — note improvements.
+4. If new violations emerged or fixes broke something, apply another round.
+
+**Maximum 2 fix cycles** for axe violations. This is a separate budget from both the
+Playwright test loop (max 3) and Lighthouse fix loop (max 2). After 2 cycles, include
+remaining violations in the report as "noted — remediation needed" with specific instructions.
+
+**NEVER fix accessibility issues by removing content or functionality.** Only add missing
+attributes, labels, roles, or adjust styles.
+
+**De-duplicate with Lighthouse:** If a violation was already fixed during the Lighthouse
+accessibility fixes (Step 6c), it should already pass. Do not double-count fixed issues
+in the report.
+
+---
+
+## Step 8: Report Results
 
 Present the final report using this format:
 
@@ -494,6 +578,21 @@ Present the final report using this format:
 
 #### Issues Not Fixed (remediation needed)
 - **[audit-id]:** [description] — [remediation instructions]
+
+### axe Accessibility Audit
+
+| Impact | Violations | Status |
+|--------|-----------|--------|
+| Critical | X | Fixed / Remaining |
+| Serious | X | Fixed / Remaining |
+| Moderate | X | Fixed / Remaining |
+| Minor | X | Fixed / Remaining |
+
+#### axe Violations Fixed
+- [file:line] — [what was changed and why]
+
+#### axe Violations Not Fixed (remediation needed)
+- **[rule-id]:** [description] — [remediation instructions]
 ~~~
 
 ---
@@ -519,4 +618,8 @@ Present the final report using this format:
 9. **NEVER fix Lighthouse issues by removing content or functionality.** Only add missing
    attributes, tags, meta elements, or optimizations.
 10. **Lighthouse fix cycles (max 2) are separate from Playwright test fix cycles (max 3).**
+    Each has its own budget.
+11. **NEVER fix axe violations by removing content or functionality.** Only add missing
+    attributes, labels, roles, or styles.
+12. **axe fix cycles (max 2) are separate from Playwright (max 3) and Lighthouse (max 2).**
     Each has its own budget.
