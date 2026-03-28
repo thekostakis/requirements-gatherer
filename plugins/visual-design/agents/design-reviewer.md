@@ -128,7 +128,7 @@ three categories:
 **Category B: CSS Property Assertions**
 - Verify design token compliance: colors, spacing, typography, border-radius, shadows
 - Assert against values from design-guidelines.md
-- Check responsive behavior at key breakpoints
+- Responsive behavior is tested in Category E below
 
 **Category C: Accessibility (axe-core)**
 - Run axe-core against each story
@@ -136,9 +136,43 @@ three categories:
 - Include specific element, rule violated, and fix suggestion
 
 **Category D: Motion Verification**
-- Verify transition/animation properties match motion tokens
-- Check that prefers-reduced-motion disables animations
-- Assert durations are within tolerance of design tokens
+- Read the Motion System section from `design-guidelines.md` (duration tokens, easing
+  tokens, animation patterns)
+- Read the Custom Motion Catalog from `design-guidelines.md` for non-standard animations
+- Read the component's Animations table from its compendium spec
+- For each component under review:
+  - Assert transition properties match motion tokens (duration, easing)
+  - Assert `animation-name` matches the expected keyframe if specified in the spec
+  - Assert `animation-duration`, `animation-timing-function` match design tokens
+  - If the component has a Custom Motion Catalog entry, verify the animation matches
+    the catalog spec
+  - Check `prefers-reduced-motion: reduce` — all animations must be disabled or simplified
+  - Check for animations not in the spec (undocumented motion = low issue)
+- For custom components not in the hardcoded compendium:
+  - If the component has any transition/animation AND no compendium entry, flag as LOW:
+    "Custom component [selector] has animation but no design spec — consider adding to
+    component compendium"
+  - If the component has animation that contradicts the motion token system (e.g., 800ms
+    duration when design system max is 400ms), flag as BLOCKING
+
+**Category E: Responsive Behavior**
+- Read the Responsive System section from `design-guidelines.md` to get the project's
+  defined breakpoints. If no breakpoints are defined, use defaults: 375px, 768px,
+  1024px, 1440px.
+- Read the component's Responsive Behavior table from its compendium spec.
+- For each breakpoint, set the Playwright viewport and verify:
+  - Layout changes match the spec (e.g., columns collapse, sidebar hides)
+  - No horizontal overflow or content clipping at any breakpoint
+  - Touch targets are at least 44x44px at mobile breakpoints
+  - Text remains readable (no truncation without ellipsis, no overlap)
+  - Navigation adapts as specified (hamburger appears, horizontal nav collapses)
+- Playwright viewport setting:
+  ```typescript
+  await page.setViewportSize({ width: 375, height: 812 });
+  ```
+- Take a screenshot at each breakpoint for visual comparison
+- Assert CSS property values at each viewport match what the design system specifies
+  for that breakpoint range
 
 ### Step 4: Run Tests
 
@@ -157,12 +191,24 @@ Capture output. Parse results into blocking and low issues.
 - Broken animations or transitions
 - Missing keyboard navigation
 - Contrast ratio failures
+- Horizontal overflow at any defined breakpoint
+- Component not adapting as specified in the responsive behavior spec
+- Touch targets below 44x44px at mobile breakpoints
+- Content unreadable (overlapping text, truncated without ellipsis) at any breakpoint
+- Animation duration/easing contradicts design system motion tokens
+- Missing `prefers-reduced-motion` support on any animated element
 
 **LOW issues (reported, don't block):**
 - Subjective visual appeal suggestions (with explanation)
 - Minor inconsistencies not covered by explicit tokens
 - Missing component spec file (suggest creating one)
 - Opportunities for better animation or polish
+- Responsive behavior not specified in component compendium (suggest adding it)
+- Layout works but could be optimized for a specific breakpoint
+- Inconsistent spacing scaling across breakpoints
+- Custom component has animation but no compendium entry documenting it
+- Undocumented animation on a component (works but not in spec)
+- Animation that could use a reusable motion pattern instead of one-off values
 
 Report format:
 ```
