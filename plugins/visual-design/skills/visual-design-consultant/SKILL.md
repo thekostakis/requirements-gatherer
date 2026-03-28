@@ -9,7 +9,7 @@ description: >
   visual preferences for a project.
   Do NOT trigger for requirements gathering — that is the requirements-gatherer skill.
   Do NOT trigger for code review — that is the design-reviewer agent.
-version: 1.0.0
+version: 1.2.0
 ---
 
 # Visual Design Consultant

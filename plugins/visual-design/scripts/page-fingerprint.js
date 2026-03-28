@@ -107,9 +107,6 @@
   let columns = 1;
   let maxDepth = 0;
 
-  // Check main's direct display
-  const mainStyle = mainEl.style;
-  const mainDisplay = mainEl.getAttribute('style');
   // Use className-based heuristic since we avoid getComputedStyle
   const mainClasses = (mainEl.className || '').toString().toLowerCase();
   if (mainClasses.includes('grid')) { topLevelDisplay = 'grid'; }
@@ -120,7 +117,7 @@
     columns = Math.min(topChildren.length, 12);
   }
 
-  // DOM depth via sampling (walk 10 deepest-looking branches)
+  // DOM depth via greedy single-branch descent following the densest child
   function measureDepth(el, depth) {
     if (depth > maxDepth) maxDepth = depth;
     if (depth > 30) return; // safety cap
