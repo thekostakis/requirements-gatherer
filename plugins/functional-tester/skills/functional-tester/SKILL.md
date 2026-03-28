@@ -482,7 +482,7 @@ other misses.
 ### 7a: Run axe CLI
 
 ~~~bash
-npx axe [PAGE_URL] --tags wcag2a,wcag2aa --reporter json > ./axe-report.json 2>&1
+npx axe [PAGE_URL] --tags wcag2a,wcag2aa --reporter json > ./axe-report.json 2>/dev/null
 ~~~
 
 Parse the JSON output:
