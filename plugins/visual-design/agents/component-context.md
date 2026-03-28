@@ -73,7 +73,7 @@ load all relevant specs.
 
 ### Step 3: Load Relevant Tokens
 Read `design-guidelines.md` and extract the specific tokens referenced by the component
-spec (colors, spacing, typography, motion).
+spec (colors, spacing, typography, motion, breakpoints).
 
 ### Step 4: Deliver
 Return the component spec and relevant tokens in a clear format:
@@ -86,6 +86,11 @@ Return the component spec and relevant tokens in a clear format:
 ## Relevant Design Tokens
 
 [Only the tokens from design-guidelines.md that this component uses]
+
+## Responsive Tokens (if component spec has Responsive Behavior section)
+
+[Breakpoints, layout behavior, and responsive patterns from design-guidelines.md
+that the component's Responsive Behavior table references]
 ```
 
 ## Context Limits
