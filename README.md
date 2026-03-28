@@ -149,6 +149,34 @@ After reviewing the generated `requirements-addendum-[date].md`:
 > create issues from the addendum
 ```
 
+### Visual Design
+
+Extract a design system from an existing site:
+
+```
+> I want it to look like stripe.com
+```
+
+Or extract from multiple sites and merge the best of each:
+
+```
+> extract design from linear.app and notion.so
+```
+
+Start a design interview from scratch (no example sites):
+
+```
+> let's set up a design system
+```
+
+Update an existing design system with new components or changes:
+
+```
+> add a pricing table component to the design system
+```
+
+The consultant produces `design-guidelines.md` and component specs in `design/components/`. After that, the component-context agent auto-loads specs when you implement components, and the design-reviewer agent runs quality gate tests automatically.
+
 ## License
 
 MIT
