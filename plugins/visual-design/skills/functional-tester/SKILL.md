@@ -30,17 +30,22 @@ Before doing ANY work, verify all required tools are available.
 ### Check 1: Playwright Installed
 
 ~~~bash
-npx playwright --version
+npx playwright --version 2>/dev/null || echo "MISSING"
 ~~~
 
-If the command fails or Playwright is NOT installed: **STOP.** Tell the user:
+If Playwright is NOT installed: auto-install it:
 
-- "Playwright is not installed. It is required to run functional tests."
-- Present these options:
-  1. **Install now:** `npm init playwright@latest` (interactive setup -- installs Playwright, browsers, and config)
-  2. **Write tests only (no run):** I will generate the test file but will not execute it. You can run it yourself later.
-  3. **Retry:** Say "retry" after installing Playwright manually.
-- Do NOT proceed without the user's decision.
+~~~bash
+npm init playwright@latest -- --yes
+npx playwright install --with-deps chromium
+~~~
+
+Re-check after install. If the install fails (permissions, network): **STOP.** Tell the user:
+
+- "Playwright could not be auto-installed."
+- "To install manually: `npm init playwright@latest`"
+- "Retry: Say 'retry' after installing."
+- Do NOT proceed without Playwright.
 
 ### Check 2: Dev Server Running
 
