@@ -1,11 +1,11 @@
 {
   "name": "visual-design",
   "version": "1.3.0",
-  "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill for visual quality gate testing with Playwright, Storybook, and axe-core.",
+  "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill for live visual quality gate testing via Chrome browser inspection. Functional-tester skill for Playwright page-level functional tests.",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["design-system", "visual-design", "storybook", "playwright", "accessibility", "axe", "design-tokens", "components", "responsive", "motion", "animations"]
+  "keywords": ["design-system", "visual-design", "chrome", "playwright", "accessibility", "axe", "design-tokens", "components", "responsive", "motion", "animations", "functional-tests"]
 }

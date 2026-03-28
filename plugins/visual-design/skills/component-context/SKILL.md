@@ -5,8 +5,8 @@ description: >
   Trigger phrases: "load component spec", "component design spec", "what does the design say
   about [component]", "show me the spec for [component]", "design spec for [component]".
   Also use when: creating or editing files in component directories (components/, ui/, widgets/),
-  writing component function/class definitions, creating Storybook stories, or any time you need
-  the design system's component specification to guide implementation.
+  writing component function/class definitions, or any time you need the design system's
+  component specification to guide implementation.
 version: 1.3.0
 ---
 

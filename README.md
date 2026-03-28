@@ -71,16 +71,34 @@ Loads the relevant component spec from the design compendium into context when i
 
 ### design-reviewer
 
-Senior creative director quality gate. Verifies implemented components match the design system through Storybook stories, Playwright visual tests, and axe accessibility audits.
+Senior creative director quality gate. Verifies implemented components match the design system through live Chrome browser inspection — visual comparison, CSS token compliance, axe accessibility audits, motion verification, and responsive behavior checks.
 
-**Trigger phrases:** "review component", "design review", "check against design system", "visual review", "run design tests"
+**Trigger phrases:** "review component", "design review", "check against design system", "visual review", "run design tests", "implement epic", "implement milestone", "implement feature", "perform a design review of [requirements]"
+
+**Two modes:**
+- **Post-implementation gate** — reviews a single component/page after implementation (like superpowers:code-reviewer for visual work)
+- **Requirements-driven review** — reads tickets/epics/requirements, inspects each visual requirement, fixes blocking issues, re-inspects
 
 **What it does:**
-- Checks all required tools before starting (Playwright, Storybook, axe-core) — never silently degrades
-- Creates/maintains Storybook stories for all components
-- Writes Playwright tests: screenshot comparison, CSS assertions, motion verification, responsive behavior, axe audits
+- Inspects live pages via Chrome browser tools — no Storybook or Playwright dependency
+- Injects axe-core at runtime for accessibility audits
+- Reads computed CSS styles and compares against design tokens
+- Tests responsive behavior at multiple viewports
 - Categorizes issues as blocking (must fix) or low (informational)
-- Fixes blocking issues and re-runs up to 3 cycles, then escalates to user
+- Fixes blocking issues directly and re-inspects up to 3 cycles, then escalates
+
+### functional-tester
+
+Generates and runs Playwright functional tests for pages and visual flows. Operates in a TDD-style loop: write tests, run them, fix failures, re-run.
+
+**Trigger phrases:** "write functional tests", "create page tests", "playwright tests for this page", "test this page", "functional tests"
+
+**What it does:**
+- Discovers testable behaviors by inspecting the live page and cross-referencing requirements
+- Presents a test plan for user confirmation before writing
+- Writes Playwright test files matching project conventions
+- Runs tests and classifies failures as test bugs vs implementation bugs
+- Fixes source code to pass tests (never weakens assertions), up to 3 cycles
 
 ## Workflow
 
@@ -101,8 +119,8 @@ Later, when scope changes:
 ```
 1. Run visual-design-consultant     →  design-guidelines.md + design/components/ + CLAUDE.md updated
 2. Implement components              →  component-context skill loads specs automatically
-3. Run design-reviewer               →  Storybook stories + Playwright tests
-4. Fix/iterate until pass            →  (quality gate loop)
+3. Run design-reviewer               →  live Chrome inspection + fix loop
+4. Run functional-tester             →  Playwright functional tests + TDD fix loop
 ```
 
 ## Installation
