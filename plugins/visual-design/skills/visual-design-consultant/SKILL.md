@@ -84,16 +84,17 @@ For each URL the user provided:
 ## Step 2: Extract Design Patterns
 
 For each representative page, use Chrome browser tools for two things only — JS extraction
-and a screenshot. The extraction script is shipped with the plugin at
-`scripts/extract-design-tokens.js`. Read it once, then execute it on each page.
+and a screenshot.
 
 For each page:
 
 1. **Navigate** to the page using mcp__claude-in-chrome__navigate.
 2. **Extract styles via JavaScript** using mcp__claude-in-chrome__javascript_tool.
-   Load and run the extraction script from `scripts/extract-design-tokens.js`. This captures
+   Load and run the extraction script `extract-design-tokens.js` which ships with this plugin.
+   To locate it, use Glob to search for `**/extract-design-tokens.js`. Read the script once,
+   then pass its contents to mcp__claude-in-chrome__javascript_tool on each page. This captures
    CSS custom properties, computed styles, keyframe animations, and component patterns in a
-   single call. (See Task 1.5 for the script contents.)
+   single call.
 3. **Capture a screenshot** using mcp__claude-in-chrome__computer with action "screenshot".
    Save to a working directory (e.g., `.design-extraction/screenshots/`). These screenshots
    are **working artifacts** used for visual design interpretation — analyzing layout
@@ -219,7 +220,8 @@ in plain language — no design expertise needed. Just tell me what you like."
   'I like how X feels.'"
 - If the user names sites, offer: "Want me to pull up those sites and extract their design
   patterns directly? That'll give us a concrete starting point." If yes, switch to
-  EXTRACTION MODE.
+  EXTRACTION MODE. Before switching, re-run the Tool Dependency Check to confirm Chrome
+  browser tools are available.
 
 ---
 
