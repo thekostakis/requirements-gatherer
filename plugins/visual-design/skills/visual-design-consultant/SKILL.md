@@ -66,80 +66,141 @@ Determine which mode to enter:
 
 # EXTRACTION MODE
 
-## Step 1: Read the Sitemap
+## Step 1: Gather URLs
 
 For each URL the user provided:
 
 1. Use **WebFetch** to fetch `[site]/sitemap.xml`. This is plain XML — no browser rendering
-   needed. Do NOT use Chrome browser tools for this step.
-2. If a sitemap exists, parse it to identify distinct page template types (homepage, product
-   page, blog post, pricing page, dashboard, etc.). Select **3-5 representative URLs per
-   template type** to capture variance within each layout pattern.
-3. If no sitemap exists, tell the user: "This site doesn't have a sitemap, so I can't
-   automatically discover its page types. I have two options:"
-   - (a) "I can start from the homepage and follow links to find different page layouts."
+   needed. Do NOT use Chrome browser tools for this step. Collect all URLs from the sitemap.
+2. Open the homepage in a Chrome tab. Run the `link-crawler.js` script (ships with this
+   plugin — use Glob to find `**/link-crawler.js`, read it once) via
+   `mcp__claude-in-chrome__javascript_tool` to discover internal links.
+3. If the sitemap has distinct sections (e.g., `/blog/`, `/docs/`, `/integrations/`), also
+   run `link-crawler.js` on one page from each section to find sub-navigation links.
+4. Combine sitemap URLs + crawled URLs, deduplicate by normalized pathname.
+5. Cap the combined list at 50 URLs for fingerprinting. If over 50, prioritize: homepage
+   first, then URLs from link crawling (more likely to be navigation-linked important
+   pages), then sitemap URLs.
+6. If no sitemap exists AND link crawling returns fewer than 10 URLs, tell the user:
+   "I found limited pages to analyze. I have two options:"
+   - (a) "I can crawl deeper from the pages I found to discover more."
    - (b) "You can give me specific URLs for the key pages you want me to analyze."
    Wait for the user's choice.
 
-## Step 2: Extract Design Patterns
+## Step 2: Fingerprint Pages in Parallel
 
-For each representative page, use Chrome browser tools for two things only — JS extraction
-and a screenshot.
+Fingerprint all gathered URLs to identify structurally unique page templates before doing
+the expensive full extraction.
 
-For each page:
+1. Load `page-fingerprint.js` once (ships with this plugin — use Glob to find
+   `**/page-fingerprint.js`, read it once).
+2. Process pages in parallel batches of 5:
+   a. Open 5 tabs simultaneously using `mcp__claude-in-chrome__tabs_create_mcp` (5 parallel calls).
+   b. Navigate each tab to a different URL (5 parallel `mcp__claude-in-chrome__navigate` calls).
+   c. Run `page-fingerprint.js` on all 5 tabs (5 parallel `mcp__claude-in-chrome__javascript_tool` calls).
+   d. Collect the fingerprint results.
+   e. Reuse tabs by navigating to the next batch of URLs, or close and reopen as needed.
+3. Repeat until all URLs are fingerprinted (50 URLs / 5 per batch = 10 rounds).
+4. Group fingerprint results by `structuralHash`. Pages with identical hashes use the
+   same template — they share the same landmark structure, layout shape, and interactive
+   element types.
+5. Present a summary to yourself (not the user): "Found X unique page templates from Y
+   total URLs. Templates: [list each hash with count and example URL]."
 
-1. **Navigate** to the page using mcp__claude-in-chrome__navigate.
-2. **Extract styles via JavaScript** using mcp__claude-in-chrome__javascript_tool.
-   Load and run the extraction script `extract-design-tokens.js` which ships with this plugin.
-   To locate it, use Glob to search for `**/extract-design-tokens.js`. Read the script once,
-   then pass its contents to mcp__claude-in-chrome__javascript_tool on each page. This captures
-   CSS custom properties, computed styles, keyframe animations, and component patterns in a
-   single call.
-3. **Capture a screenshot** using mcp__claude-in-chrome__computer with action "screenshot".
-   Save to a working directory (e.g., `.design-extraction/screenshots/`). These screenshots
-   are **working artifacts** used for visual design interpretation — analyzing layout
-   composition, visual weight, whitespace rhythm, component relationships, and overall
-   aesthetic feel that structured CSS data alone cannot capture.
+## Step 3: Full Extraction on Unique Pages
 
-Screenshots let you interpret the site holistically as a creative director would: how
-components relate spatially, the visual hierarchy of the page, the overall mood and density,
-and patterns that exist in the visual design but not in discrete CSS values.
+From each unique structural group, pick 1-2 representative pages. Prefer pages with:
+- The most entries in the `components` array (richest component diversity)
+- The most interactive elements
+- The highest DOM complexity
+
+For each representative page, use Chrome browser tools for three things — JS extraction,
+a screenshot, and visual component review.
+
+Load the extraction script `extract-design-tokens.js` once (use Glob to find
+`**/extract-design-tokens.js`, read it once).
+
+Process representative pages in parallel batches of 3-5 tabs:
+
+1. **Navigate** to the page using `mcp__claude-in-chrome__navigate`.
+2. **Extract styles via JavaScript** using `mcp__claude-in-chrome__javascript_tool`.
+   To pass discovered component selectors from the fingerprint, prepend
+   `const discoveredSelectors = [".pricing-toggle", ".faq-accordion", ...];` (built from
+   the fingerprint's `components[].selector` values for this page) before the extraction
+   script contents. This makes the extraction script capture styles for ALL discovered
+   components, not just the 32 hardcoded selectors.
+3. **Capture a screenshot** using `mcp__claude-in-chrome__computer` with action "screenshot".
+   Save to `.design-extraction/screenshots/`. These screenshots are **working artifacts**
+   for visual design interpretation.
+4. **Visual component inventory**: After extraction + screenshot for each page, review the
+   screenshot and cross-reference against the fingerprint's DOM component inventory.
+   Identify any visually distinct components the DOM analysis missed — especially common
+   on utility-class/Tailwind sites where the DOM is generic `div`s with no distinctive
+   class names. For any visually-discovered components not in the inventory, identify them
+   in the DOM by position/content and do a targeted follow-up extraction with their
+   selectors added to `discoveredSelectors`.
+5. Merge DOM-discovered and visually-discovered component inventories into a unified list
+   per page.
 
 **Important:** Do NOT use `mcp__claude-in-chrome__read_page` — the JS extraction script
 already captures everything from the DOM. Adding read_page would duplicate data and waste
 tokens.
 
-## Step 2b: Responsive Extraction
+## Step 4: Responsive Extraction
 
-After completing Step 2 for all pages, perform responsive extraction on 1-2 representative
+After completing Step 3 for all representative pages, perform responsive extraction on 1-2
 pages (pick the pages with the most layout complexity — typically the homepage and one
 content-heavy page):
 
-1. Examine the `breakpoints` array from the extraction data. If the site defines breakpoints,
-   use those. If not, use standard breakpoints: 375px (mobile), 768px (tablet), 1024px
-   (desktop), 1440px (wide desktop).
-2. For each breakpoint width:
-   a. Call `mcp__claude-in-chrome__resize_window` with `width` set to the breakpoint value,
+1. Examine the `breakpoints` array AND the `fluidResponsive` object from the extraction
+   data. Note whether the site uses discrete breakpoints, fluid techniques, or both.
+2. Regardless of what the site uses, test at these viewport widths: 375px (mobile), 768px
+   (tablet), 1024px (desktop), 1440px (wide desktop).
+3. For each viewport width:
+   a. Call `mcp__claude-in-chrome__resize_window` with `width` set to the value,
       `height` of 900, and the current `tabId`.
-   b. Re-run the extraction script via `mcp__claude-in-chrome__javascript_tool`. This captures
-      computed styles, layout patterns, and animated elements at this viewport width.
-   c. Take a screenshot at this viewport size (same working artifacts approach as Step 2).
-3. After all viewport passes, compare the extraction data across viewports:
+   b. Re-run the extraction script via `mcp__claude-in-chrome__javascript_tool`. This
+      captures computed styles, layout patterns, and animated elements at this viewport.
+   c. Take a screenshot at this viewport size (same working artifacts approach as Step 3).
+4. After all viewport passes, compare the extraction data across viewports:
    - Which layout patterns change? (e.g., a 3-column grid becoming a single column)
    - Which components change size, padding, or visibility?
    - Does the navigation pattern change? (horizontal menu becoming a hamburger)
    - Do font sizes or spacing values scale down?
-4. Restore the browser to a reasonable default width (1280px) after responsive extraction.
+   - Does the `fluidResponsive` data show clamp()/viewport-unit usage?
+5. Restore the browser to a reasonable default width (1280px) after responsive extraction.
 
-**Note:** The `breakpoints` and `responsivePatterns` data from the script are the same at
-every viewport (parsed from stylesheet rules), but `layoutPatterns`, `components`, `fonts`,
-`spacing`, and `animatedElements` will differ. The diff between viewport passes reveals the
-responsive behavior.
+**Note:** The `breakpoints`, `responsivePatterns`, and `fluidResponsive` data are the same
+at every viewport (parsed from stylesheet rules), but `layoutPatterns`, `components`,
+`fonts`, `spacing`, and `animatedElements` will differ. The diff between viewport passes
+reveals the responsive behavior.
 
-**Acceptable shortcut:** If there are many breakpoints, extracting at just two widths
-(375px mobile + 1280px desktop) is sufficient to capture the core responsive behavior.
+**Acceptable shortcut:** If time is tight, extracting at just two widths (375px mobile +
+1280px desktop) is sufficient to capture the core responsive behavior.
 
-## Step 3: Compile and Deduplicate
+### Responsive Approach Choice
+
+After responsive extraction is complete, **always** present this choice to the user:
+
+"For your responsive approach, you have two options:
+- **Fluid (recommended):** Things scale smoothly across all screen sizes using `clamp()`
+  and viewport units. No hard jumps. Works on every screen without needing to define
+  specific sizes.
+- **Breakpoint-based:** Layout changes at specific screen widths. Things stay fixed between
+  breakpoints and then jump to a new size.
+
+I recommend fluid — which do you prefer?"
+
+If the extracted site uses breakpoints, note that: "The site I extracted uses breakpoints
+at [X, Y, Z]px." But still recommend fluid.
+
+If the extracted site uses fluid techniques, note that: "The site I extracted already uses
+fluid responsive techniques like clamp() and viewport units."
+
+Remember the user's choice — it determines which responsive template format to use in the
+design-guidelines.md output.
+
+## Step 5: Compile and Deduplicate
 
 After extracting from all pages across all sites:
 
@@ -162,7 +223,7 @@ After extracting from all pages across all sites:
    match any hardcoded selector are especially important to document — these are the ones
    most likely to be missed during implementation.
 
-## Step 4: Multi-Site Conflict Resolution
+## Step 6: Multi-Site Conflict Resolution
 
 If multiple sites were extracted, present conflicts to the user in plain language:
 
@@ -192,7 +253,7 @@ I extracted design patterns from [N] sites. Here's what I found:
 
 Wait for user choices on each conflict before proceeding.
 
-## Step 5: Interview for Unextractable Properties
+## Step 7: Interview for Unextractable Properties
 
 After extraction, some things can't be determined from CSS alone. Ask about these in plain
 language (don't skip even if you think you can guess):
@@ -263,6 +324,14 @@ in plain language — no design expertise needed. Just tell me what you like."
   everything be available everywhere?"
 - "Should the navigation change on smaller screens? (Like switching from a top menu bar
   to a hamburger menu?)"
+
+### Responsive Approach
+- "For how things adapt to different screen sizes, you have two options:
+  **Fluid** means everything scales smoothly — text, spacing, and layout adjust
+  continuously as the screen gets bigger or smaller. No hard jumps.
+  **Breakpoint-based** means things stay the same until a specific screen width, then
+  jump to a new layout.
+  I recommend fluid — it works well on every screen size. Which sounds better to you?"
 
 ### Component Style
 - "Rounded and friendly, or sharp and professional?"
