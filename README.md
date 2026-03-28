@@ -1,6 +1,6 @@
 # requirements-gatherer
 
-A Claude Code plugin with two skills for requirements gathering and issue creation. The skills work in sequence with a human review gate between them.
+A Claude Code plugin marketplace for product design and project planning workflows.
 
 ## Skills
 
@@ -50,6 +50,34 @@ Supports two modes:
 - Open questions become `needs-decision`-labeled issues
 - Verifies everything was created correctly before reporting the summary
 
+### visual-design-consultant
+
+Establishes a project's visual design system through plain-language interview or by extracting patterns from example websites. Produces `design-guidelines.md` (core tokens, permanently in CLAUDE.md context) and a component compendium (`design/components/`) with detailed per-component specs.
+
+**Trigger phrases:** "design system", "visual design", "extract design from [site]", "I want it to look like [site]", "design guidelines"
+
+**What it does:**
+- Extracts design patterns from example sites (sitemap via WebFetch, CSS extraction + screenshots via Chrome, multi-site conflict resolution)
+- Interviews in plain language — no design expertise needed
+- Produces compact design-guidelines.md (under 500 lines) for permanent context
+- Generates per-component spec files in design/components/
+- Supports addendum mode to update existing design systems
+
+### component-context (agent)
+
+Fires automatically when frontend component work is detected. Loads the relevant component spec from the compendium into context so Claude has exact measurements, states, animations, and variants without loading everything.
+
+### design-reviewer (agent)
+
+Senior creative director quality gate. Maintains Storybook, writes Playwright visual tests and axe accessibility audits, runs in a loop with the implementing agent until zero blocking issues.
+
+**What it does:**
+- Checks all required tools before starting (Playwright, Storybook, axe-core) — never silently degrades
+- Creates/maintains Storybook stories for all components
+- Writes Playwright tests: screenshot comparison, CSS assertions, motion verification, axe audits
+- Categorizes issues as blocking (must fix) or low (informational)
+- Loops with implementing agent up to 3 cycles, then escalates to user
+
 ## Workflow
 
 ```
@@ -64,6 +92,16 @@ Later, when scope changes:
 6. Run requirements-organizer      →  New/updated issues, old issues superseded
 ```
 
+## Visual Design Workflow
+
+```
+1. Run visual-design-consultant     →  design-guidelines.md + design/components/
+2. Add reference to CLAUDE.md       →  (permanent design context)
+3. Implement components              →  component-context agent auto-loads specs
+4. Design reviewer runs automatically →  Storybook stories + Playwright tests
+5. Fix/iterate until pass            →  (quality gate loop)
+```
+
 ## Installation
 
 **Step 1:** Add the marketplace:
@@ -72,10 +110,11 @@ Later, when scope changes:
 /plugin marketplace add thekostakis/requirements-gatherer
 ```
 
-**Step 2:** Install the plugin:
+**Step 2:** Install plugins:
 
 ```
 /plugin install requirements-gatherer@functional-design-tools
+/plugin install visual-design@functional-design-tools
 ```
 
 **Step 3:** Reload:
