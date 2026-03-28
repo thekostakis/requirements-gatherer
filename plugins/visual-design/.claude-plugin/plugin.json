@@ -1,0 +1,11 @@
+{
+  "name": "visual-design",
+  "version": "1.0.0",
+  "description": "Visual design system toolkit. Includes a consultant skill for establishing design systems via interview or site extraction, a component-context agent for on-demand spec delivery, and a design reviewer agent for visual quality gate testing with Playwright, Storybook, and axe-core.",
+  "author": {
+    "name": "Chris Kostakis"
+  },
+  "repository": "https://github.com/thekostakis/requirements-gatherer",
+  "license": "MIT",
+  "keywords": ["design-system", "visual-design", "storybook", "playwright", "accessibility", "axe", "design-tokens", "components"]
+}
