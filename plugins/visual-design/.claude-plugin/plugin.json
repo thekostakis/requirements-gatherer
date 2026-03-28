@@ -1,7 +1,7 @@
 {
   "name": "visual-design",
-  "version": "1.1.0",
-  "description": "Visual design system toolkit. Includes a consultant skill for establishing design systems via interview or site extraction with responsive layout analysis and custom component motion discovery, a component-context agent for on-demand spec delivery, and a design reviewer agent for visual quality gate testing with Playwright, Storybook, and axe-core.",
+  "version": "1.2.0",
+  "description": "Visual design system toolkit. Includes a consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery, a component-context agent with fuzzy matching for on-demand spec delivery, and a design reviewer agent for visual quality gate testing with Playwright, Storybook, and axe-core.",
   "author": {
     "name": "Chris Kostakis"
   },
