@@ -109,6 +109,36 @@ and patterns that exist in the visual design but not in discrete CSS values.
 already captures everything from the DOM. Adding read_page would duplicate data and waste
 tokens.
 
+## Step 2b: Responsive Extraction
+
+After completing Step 2 for all pages, perform responsive extraction on 1-2 representative
+pages (pick the pages with the most layout complexity — typically the homepage and one
+content-heavy page):
+
+1. Examine the `breakpoints` array from the extraction data. If the site defines breakpoints,
+   use those. If not, use standard breakpoints: 375px (mobile), 768px (tablet), 1024px
+   (desktop), 1440px (wide desktop).
+2. For each breakpoint width:
+   a. Call `mcp__claude-in-chrome__resize_window` with `width` set to the breakpoint value,
+      `height` of 900, and the current `tabId`.
+   b. Re-run the extraction script via `mcp__claude-in-chrome__javascript_tool`. This captures
+      computed styles, layout patterns, and animated elements at this viewport width.
+   c. Take a screenshot at this viewport size (same working artifacts approach as Step 2).
+3. After all viewport passes, compare the extraction data across viewports:
+   - Which layout patterns change? (e.g., a 3-column grid becoming a single column)
+   - Which components change size, padding, or visibility?
+   - Does the navigation pattern change? (horizontal menu becoming a hamburger)
+   - Do font sizes or spacing values scale down?
+4. Restore the browser to a reasonable default width (1280px) after responsive extraction.
+
+**Note:** The `breakpoints` and `responsivePatterns` data from the script are the same at
+every viewport (parsed from stylesheet rules), but `layoutPatterns`, `components`, `fonts`,
+`spacing`, and `animatedElements` will differ. The diff between viewport passes reveals the
+responsive behavior.
+
+**Acceptable shortcut:** If there are many breakpoints, extracting at just two widths
+(375px mobile + 1280px desktop) is sufficient to capture the core responsive behavior.
+
 ## Step 3: Compile and Deduplicate
 
 After extracting from all pages across all sites:
@@ -119,6 +149,18 @@ After extracting from all pages across all sites:
    type scale, spacing scale, motion tokens, component patterns.
 3. **Identify the design language**: is it minimal or detailed? Rounded or sharp? Elevated
    (shadows) or flat? Dense or spacious? Fast or deliberate?
+4. **Identify responsive patterns**: From the multi-viewport extraction data, characterize:
+   mobile-first vs desktop-first (do `@media` rules use `min-width` or `max-width`?), how
+   many breakpoints the site uses, what layout strategy is used (CSS Grid, Flexbox, or both),
+   and key responsive behaviors (stacking columns, hiding sidebars, collapsing navigation,
+   changing font sizes).
+5. **Catalog motion patterns**: From the `animatedElements` data, group discovered animations
+   by purpose: micro-interactions (hover/focus feedback), state transitions (open/close,
+   show/hide), loading/skeleton patterns, scroll-triggered animations, decorative/ambient
+   motion. Cross-reference `animationName` values against the extracted `CSSKeyframesRule`
+   definitions to get full motion specs. Custom components with unique animations that don't
+   match any hardcoded selector are especially important to document — these are the ones
+   most likely to be missed during implementation.
 
 ## Step 4: Multi-Site Conflict Resolution
 
@@ -164,6 +206,24 @@ language (don't skip even if you think you can guess):
   default to WCAG AA which covers most needs.)"
 - "Any colors or styles you definitely don't want?"
 
+**Responsive (based on extraction data):**
+- "I found the site uses [N] breakpoints for different screen sizes. Do you want to match
+  those, or do you have specific screen sizes you need to support?"
+- "Should your layout collapse to a single column on phones, or do you want a compact
+  multi-column layout on small screens?"
+- "Are there any features that should be hidden on mobile, or should everything be
+  available at every screen size?"
+
+**Custom component animations (based on animatedElements discovery):**
+- "I found [N] different animations on the site, including some on custom elements like
+  [list top 3-5 by selector]. Here's what they do: [brief description]. Which of these
+  do you want to keep in your design system?"
+- "Some of these animations are on unique components that aren't standard buttons or
+  cards — like [example]. Should I document these as part of your component library,
+  or are they one-offs you don't need?"
+- For any animation the user wants to keep: "Should this animation be reusable (other
+  components could use the same motion pattern) or specific to just this component?"
+
 ---
 
 # INTERVIEW MODE
@@ -194,7 +254,15 @@ in plain language — no design expertise needed. Just tell me what you like."
 ### Spacing and Layout
 - "Should the interface feel dense (lots of info visible at once, like a dashboard) or
   spacious (clean, focused, one thing at a time)?"
-- "Is this primarily used on phones, desktops, or both equally?"
+- "Will people use this on phones, tablets, desktops, or all of them? Which is the most
+  important?"
+- If multiple device types: "On smaller screens like phones, should the layout stack things
+  vertically (like scrolling through cards one at a time) or try to fit more on screen
+  (like a compact grid)?"
+- "Are there any features or sections that should only appear on larger screens? Or should
+  everything be available everywhere?"
+- "Should the navigation change on smaller screens? (Like switching from a top menu bar
+  to a hamburger menu?)"
 
 ### Component Style
 - "Rounded and friendly, or sharp and professional?"
@@ -270,6 +338,7 @@ Show the user what you've compiled as a narrative summary:
 **Spacing:** [describe the density]
 **Component style:** [describe the look]
 **Motion:** [describe the animation approach]
+**Responsive:** [describe the breakpoint approach and how layout adapts across screen sizes]
 **Accessibility:** [describe the standard]"
 
 ### Step 2: Confirm
@@ -391,6 +460,16 @@ Written so anyone can understand the intent.]
 - **Feedback:** [Button press, success, error shake]
 - **Page transition:** [How pages/views change]
 
+### Custom Motion Catalog
+Components with animations beyond standard hover/focus transitions. These were discovered
+during site extraction and confirmed during interview.
+
+| Component | Animation | Duration | Easing | Trigger | Reusable? |
+|-----------|-----------|----------|--------|---------|-----------|
+| [selector/name] | [what it does] | [token] | [token] | [hover/scroll/load/state] | [yes/no] |
+
+[For each reusable animation, include the keyframe definition if extracted.]
+
 ## Accessibility Standards
 
 - **Standard:** WCAG 2.1 AA
@@ -398,6 +477,34 @@ Written so anyone can understand the intent.]
 - **Focus:** Visible focus indicators on all interactive elements
 - **Motion:** Respect prefers-reduced-motion media query
 - **Keyboard:** All interactive elements reachable and operable via keyboard
+
+## Responsive System
+
+### Approach
+[Mobile-first / Desktop-first / Hybrid. 1-2 sentences on the responsive philosophy.]
+
+### Breakpoints
+| Token | Value | Description |
+|-------|-------|-------------|
+| bp-sm | Xpx | Small phones (portrait) |
+| bp-md | Xpx | Tablets, large phones (landscape) |
+| bp-lg | Xpx | Desktops, laptops |
+| bp-xl | Xpx | Large desktops, wide monitors |
+
+### Layout Behavior
+| Breakpoint Range | Columns | Navigation | Sidebar | Container Max-Width |
+|-----------------|---------|------------|---------|-------------------|
+| 0 - bp-sm | 1 | [hamburger/bottom nav] | [hidden/overlay] | 100% |
+| bp-sm - bp-md | [1-2] | [varies] | [varies] | Xpx |
+| bp-md - bp-lg | [2-3] | [horizontal] | [visible] | Xpx |
+| bp-lg+ | [3-4] | [horizontal] | [visible] | Xpx |
+
+### Responsive Patterns
+- **Grid strategy:** [CSS Grid / Flexbox / both]
+- **Stacking behavior:** [How multi-column layouts collapse]
+- **Font scaling:** [Whether/how type scale changes at breakpoints]
+- **Spacing scaling:** [Whether spacing tokens change at breakpoints]
+- **Touch targets:** [Minimum tap target size on mobile, if different from desktop]
 ```
 
 [If tech stack is known, add a section:]
@@ -480,7 +587,13 @@ Each file in `design/components/[component-name].md`:
 - **Contrast:** [Meets AA for all states]
 
 ## Responsive Behavior
-[How the component adapts across breakpoints, if relevant]
+| Breakpoint | Changes |
+|------------|---------|
+| Below bp-sm | [What changes: stacking, font size, padding, visibility] |
+| bp-sm to bp-md | [What changes] |
+| bp-md+ | [Default / desktop behavior] |
+
+[Any responsive-specific notes: touch target enlargement, swipe gestures on mobile, etc.]
 ```
 
 ## Important Boundaries
