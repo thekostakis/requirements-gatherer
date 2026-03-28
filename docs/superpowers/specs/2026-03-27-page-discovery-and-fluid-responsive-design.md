@@ -243,15 +243,108 @@ Same as current template (Breakpoints table, Layout Behavior table, Responsive P
 
 ---
 
-## 6. Files Changed
+## 6. Enhanced Component-Context Agent — Fuzzy Matching & Richer Metadata
+
+### Problem
+
+Currently the component-context agent either finds an exact spec match in `design/components/` or says "no spec found, run the consultant." This is too strict — if someone is building a "notification banner" and there's an "alert" component with similar purpose, data fields, and usage patterns, the agent should surface it as a suggestion.
+
+### 6a. Richer Component Compendium Metadata
+
+Add two new sections to the component compendium file format (in SKILL.md's template):
+
+**Data Fields** — what data/props the component expects:
+```markdown
+## Data Fields
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| title | string | yes | Primary text displayed in the alert |
+| description | string | no | Secondary explanatory text |
+| severity | enum(info, warning, error, success) | yes | Controls color and icon |
+| dismissible | boolean | no | Whether the user can close it |
+| action | { label, href } | no | Optional call-to-action link |
+```
+
+**Usage & Content** — when to use this component and what kind of content it typically holds:
+```markdown
+## Usage & Content
+- **When to use:** To communicate a system status, warning, or confirmation to the user.
+  Not for marketing callouts (use the "callout" component) or inline validation (use form field error states).
+- **Typical content:** Short message (1-2 sentences), optional icon, optional dismiss button, optional action link.
+- **Common contexts:** Form submissions, system alerts, permission changes, destructive action confirmations.
+- **Related components:** callout, toast, badge, form-error
+```
+
+The `Related components` field is explicitly authored during the consultant skill's output — the skill should cross-reference components and note which ones serve similar purposes.
+
+### 6b. Component-Context Agent Fuzzy Matching
+
+Update `component-context.md` to add a suggestion step when no exact match is found:
+
+**Current behavior:**
+1. Identify the component being implemented
+2. Look for `design/components/[component-name].md`
+3. If not found → "No spec exists, run the consultant skill"
+
+**New behavior:**
+1. Identify the component being implemented
+2. Look for exact match in `design/components/[component-name].md`
+3. If found → deliver the spec (unchanged)
+4. If NOT found → **fuzzy search**:
+   a. Read all component spec files in `design/components/`
+   b. Match against:
+      - **Name similarity:** component name substrings, hyphenated variants (e.g., "notification-banner" matches "alert-banner", "notification")
+      - **Related components field:** if any spec lists the target component name in its "Related components"
+      - **Usage & Content similarity:** compare the purpose of what's being built against each spec's "When to use" and "Common contexts"
+      - **Data fields overlap:** if the component being built has similar props/data shape to an existing spec
+   c. Return up to 3 suggestions ranked by relevance:
+      ```
+      ## No Exact Spec: [Component Name]
+
+      No spec file found for "[component name]". Here are similar components
+      that may be useful as a starting point:
+
+      ### Suggestion 1: [Alert] (highest relevance)
+      **Why:** Similar purpose (user-facing status messages), overlapping data fields
+      (title, description, severity), listed as related to notification patterns.
+      [Full spec content of alert component]
+
+      ### Suggestion 2: [Toast] (moderate relevance)
+      **Why:** Also a transient notification pattern, shares dismissible behavior.
+      [Abbreviated spec — key properties and usage only]
+
+      ---
+      To add a dedicated spec for [component name], run the visual-design-consultant skill.
+      ```
+   d. If no suggestions score above a minimum relevance threshold → fall back to the current "no spec, run consultant" message
+
+### 6c. Matching Strategy
+
+The agent uses a simple weighted scoring approach (no external dependencies):
+
+| Signal | Weight | How it matches |
+|--------|--------|---------------|
+| Exact name match | — | Direct file lookup (existing behavior) |
+| Name substring | 3 | "notification" appears in "notification-banner" spec |
+| Related components field | 3 | Target name listed in another spec's Related components |
+| Usage keyword overlap | 2 | Words from the target context match a spec's "When to use" / "Common contexts" |
+| Data field overlap | 2 | Similar prop names or types |
+| Same category | 1 | Both are "feedback" components, or both are "navigation" components |
+
+The agent already runs on Haiku and has access to Read and Glob — this is within its capabilities. No new tools needed.
+
+---
+
+## 7. Files Changed
 
 | File | Change Type | Summary |
 |------|------------|---------|
 | `plugins/visual-design/scripts/page-fingerprint.js` | **New** | Lightweight structural fingerprint + component inventory |
 | `plugins/visual-design/scripts/link-crawler.js` | **New** | Internal link discovery |
 | `plugins/visual-design/scripts/extract-design-tokens.js` | Modify | Add fluid responsive detection + dynamic component extraction |
-| `plugins/visual-design/skills/visual-design-consultant/SKILL.md` | Modify | Restructure Steps 1-4, add responsive choice question, update template |
+| `plugins/visual-design/skills/visual-design-consultant/SKILL.md` | Modify | Restructure Steps 1-4, add responsive choice question, update template, add Data Fields + Usage & Content to component compendium template |
 | `plugins/visual-design/agents/design-reviewer.md` | Modify | Update responsive testing to handle fluid approach (test at viewport widths, verify clamp ranges) |
+| `plugins/visual-design/agents/component-context.md` | Modify | Add fuzzy matching with suggestions when no exact spec found, use Data Fields + Usage & Content for relevance scoring |
 
 ---
 
