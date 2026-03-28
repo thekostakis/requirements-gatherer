@@ -419,11 +419,18 @@ Only after confirmation:
 1. Write `design-guidelines.md` to the working directory root.
 2. Create `design/components/` directory.
 3. Write one file per component identified.
-4. Suggest adding to CLAUDE.md:
-   "I recommend adding this line to your CLAUDE.md so Claude always has your design
-   system in context:
-   `See design-guidelines.md for the project's visual design system. For detailed
-   component specs, see design/components/.`"
+4. Add design context to CLAUDE.md automatically:
+   - If CLAUDE.md exists: read it, check if it already references `design-guidelines.md`.
+     If not, append a blank line and the reference block below to the end of the file.
+   - If CLAUDE.md does not exist: create it with the standard header and the reference block.
+   - Reference block to add:
+     ```
+     ## Design System
+     See design-guidelines.md for the project's visual design system.
+     For detailed component specs, see design/components/.
+     ```
+   - Tell the user: "I've added the design system reference to your CLAUDE.md so Claude
+     always has your design context."
 
 ---
 
