@@ -1,13 +1,20 @@
 // extract-design-tokens.js
 // Shipped with the visual-design plugin. Executed via Chrome javascript_tool on each page.
 // Returns structured design token data: colors, fonts, spacing, radii, shadows, transitions,
-// keyframe animations, and component patterns.
+// keyframe animations, component patterns, responsive breakpoints, layout patterns,
+// and animated element discovery.
 (() => {
   const result = { colors: new Set(), fonts: new Set(), spacing: new Set(),
     radii: new Set(), shadows: new Set(), transitions: new Set(),
     animations: [], components: [] };
 
+  // Change 1d: Capture viewport dimensions
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
   // 1. Extract CSS custom properties from all stylesheets
+  const mediaRules = [];
+  const breakpointSet = new Set();
   try {
     for (const sheet of document.styleSheets) {
       try {
@@ -33,6 +40,30 @@
               }))
             });
           }
+          // Change 1a: Capture @media rules and extract breakpoints
+          if (rule instanceof CSSMediaRule) {
+            if (mediaRules.length < 50) {
+              const query = rule.media.mediaText;
+              const bpMatch = query.match(/(\d+(?:\.\d+)?)(px|em|rem)/);
+              if (bpMatch) {
+                breakpointSet.add(JSON.stringify({ value: parseFloat(bpMatch[1]), unit: bpMatch[2], query }));
+              }
+              const childRules = [];
+              const childList = rule.cssRules || [];
+              for (let ci = 0; ci < Math.min(childList.length, 20); ci++) {
+                const child = childList[ci];
+                if (child.style && child.selectorText) {
+                  const props = {};
+                  for (let pi = 0; pi < child.style.length; pi++) {
+                    const p = child.style[pi];
+                    props[p] = child.style.getPropertyValue(p).trim();
+                  }
+                  childRules.push({ selector: child.selectorText, properties: props });
+                }
+              }
+              mediaRules.push({ query, childRules });
+            }
+          }
         }
       } catch(e) {} // CORS-blocked cross-origin sheets — expected, skip silently
     }
@@ -45,6 +76,8 @@
     '[class*="hero"]', '[class*="container"]', '[class*="badge"]', '[class*="tag"]',
     '[class*="avatar"]', '[class*="tooltip"]', '[class*="dropdown"]', '[class*="tab"]',
     '[class*="alert"]', '[class*="toast"]', '[class*="sidebar"]', '[class*="menu"]'];
+
+  const layoutPatterns = [];
 
   selectors.forEach(sel => {
     const el = document.querySelector(sel);
@@ -79,11 +112,71 @@
         }
       });
     }
+
+    // Change 1b: Capture layout patterns for flex and grid elements
+    if (cs.display && (cs.display.includes('flex') || cs.display.includes('grid'))) {
+      const layout = { selector: sel, display: cs.display, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth };
+      if (cs.display.includes('flex')) {
+        layout.flexDirection = cs.flexDirection;
+        layout.flexWrap = cs.flexWrap;
+        layout.alignItems = cs.alignItems;
+        layout.justifyContent = cs.justifyContent;
+      }
+      if (cs.display.includes('grid')) {
+        layout.gridTemplateColumns = cs.gridTemplateColumns;
+        layout.gridTemplateRows = cs.gridTemplateRows;
+        layout.gap = cs.gap;
+      }
+      layoutPatterns.push(layout);
+    }
   });
+
+  // Change 1c: Discover ALL animated/transitioning elements (not just indexed selectors)
+  const animatedElements = [];
+  const allElements = document.querySelectorAll('*');
+  const seen = new Set();
+  for (const el of allElements) {
+    if (animatedElements.length >= 100) break;
+    const cs = getComputedStyle(el);
+    const hasTransition = cs.transition && cs.transition !== 'all 0s ease 0s' && cs.transition !== 'none';
+    const hasAnimation = cs.animationName && cs.animationName !== 'none';
+    if (!hasTransition && !hasAnimation) continue;
+    const sig = `${cs.transition}|${cs.animationName}|${cs.animationDuration}`;
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    const id = el.id ? `#${el.id}` : '';
+    const classes = el.className && typeof el.className === 'string'
+      ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.')
+      : '';
+    const selector = el.tagName.toLowerCase() + id + classes;
+    const entry = { selector };
+    if (hasTransition) {
+      entry.transition = {
+        property: cs.transitionProperty,
+        duration: cs.transitionDuration,
+        timing: cs.transitionTimingFunction,
+        delay: cs.transitionDelay
+      };
+    }
+    if (hasAnimation) {
+      entry.animation = {
+        name: cs.animationName,
+        duration: cs.animationDuration,
+        timing: cs.animationTimingFunction,
+        delay: cs.animationDelay,
+        iterationCount: cs.animationIterationCount,
+        direction: cs.animationDirection,
+        fillMode: cs.animationFillMode
+      };
+    }
+    animatedElements.push(entry);
+  }
 
   return {
     url: window.location.href,
     title: document.title,
+    viewportWidth,
+    viewportHeight,
     colors: [...result.colors].filter(c => c && c !== 'rgba(0, 0, 0, 0)'),
     fonts: [...result.fonts],
     spacing: [...result.spacing],
@@ -91,6 +184,10 @@
     shadows: [...result.shadows],
     transitions: [...result.transitions],
     animations: result.animations,
-    components: result.components
+    components: result.components,
+    breakpoints: [...breakpointSet].map(s => JSON.parse(s)).sort((a, b) => a.value - b.value),
+    responsivePatterns: mediaRules,
+    layoutPatterns,
+    animatedElements
   };
 })();
