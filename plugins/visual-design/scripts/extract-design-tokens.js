@@ -7,6 +7,8 @@
   const result = { colors: new Set(), fonts: new Set(), spacing: new Set(),
     radii: new Set(), shadows: new Set(), transitions: new Set(),
     animations: [], components: [] };
+  const fluidData = { clampExpressions: new Set(), viewportUnitProperties: new Set(),
+    containerRules: [] };
 
   // Change 1d: Capture viewport dimensions
   const viewportWidth = window.innerWidth;
@@ -27,6 +29,13 @@
                 if (val.match(/#|rgb|hsl/i)) result.colors.add(`${prop}: ${val}`);
                 if (val.match(/px|rem|em|%/) && !val.match(/#|rgb/))
                   result.spacing.add(`${prop}: ${val}`);
+                // Detect fluid responsive functions in custom properties
+                if (val.match(/clamp\s*\(|min\s*\(|max\s*\(/i)) {
+                  fluidData.clampExpressions.add(`${prop}: ${val}`);
+                }
+                if (val.match(/\d+(\.\d+)?(vw|vh|vmin|vmax|dvh|svh)/i)) {
+                  fluidData.viewportUnitProperties.add(`${prop}: ${val}`);
+                }
               }
             }
           }
@@ -64,18 +73,35 @@
               mediaRules.push({ query, childRules });
             }
           }
+          // Capture container query rules
+          if (typeof CSSContainerRule !== 'undefined' && rule instanceof CSSContainerRule) {
+            if (fluidData.containerRules.length < 20) {
+              fluidData.containerRules.push({
+                containerName: rule.containerName || '(unnamed)',
+                conditionText: rule.conditionText || rule.cssText.slice(0, 200)
+              });
+            }
+          }
         }
       } catch(e) {} // CORS-blocked cross-origin sheets — expected, skip silently
     }
   } catch(e) {}
 
   // 2. Sample computed styles from key elements across the page
+  // Dynamic component extraction: merge hardcoded selectors with discovered ones
+  // When called with `const discoveredSelectors = [...]` prepended, those selectors
+  // are included. Otherwise, only the hardcoded list is used.
+  const extraSelectors = (typeof discoveredSelectors !== 'undefined' && Array.isArray(discoveredSelectors))
+    ? discoveredSelectors : [];
   const selectors = ['body', 'h1', 'h2', 'h3', 'h4', 'p', 'a', 'button',
     'input', 'select', 'textarea', 'nav', 'header', 'footer', 'main', 'aside',
     '[class*="card"]', '[class*="btn"]', '[class*="modal"]', '[class*="dialog"]',
     '[class*="hero"]', '[class*="container"]', '[class*="badge"]', '[class*="tag"]',
     '[class*="avatar"]', '[class*="tooltip"]', '[class*="dropdown"]', '[class*="tab"]',
-    '[class*="alert"]', '[class*="toast"]', '[class*="sidebar"]', '[class*="menu"]'];
+    '[class*="alert"]', '[class*="toast"]', '[class*="sidebar"]', '[class*="menu"]',
+    ...extraSelectors.filter(s => !['body','h1','h2','h3','h4','p','a','button',
+      'input','select','textarea','nav','header','footer','main','aside'].includes(s))
+  ];
 
   const layoutPatterns = [];
 
@@ -93,6 +119,14 @@
     result.radii.add(cs.borderRadius);
     if (cs.boxShadow !== 'none') result.shadows.add(cs.boxShadow);
     if (cs.transition !== 'all 0s ease 0s') result.transitions.add(cs.transition);
+    // Detect fluid responsive values in computed styles
+    const propsToCheck = { fontSize: cs.fontSize, padding: cs.padding, margin: cs.margin,
+      width: cs.width, maxWidth: cs.maxWidth, gap: cs.gap };
+    for (const [name, val] of Object.entries(propsToCheck)) {
+      if (val && val.match && val.match(/\d+(\.\d+)?(vw|vh|vmin|vmax|dvh|svh)/i)) {
+        fluidData.viewportUnitProperties.add(`${sel} ${name}: ${val}`);
+      }
+    }
 
     // 3. Capture component patterns for common UI elements
     const tag = sel.replace(/\[class\*="(.+?)"\]/, '$1');
@@ -188,6 +222,14 @@
     breakpoints: [...breakpointSet].map(s => JSON.parse(s)).sort((a, b) => a.value - b.value),
     responsivePatterns: mediaRules,
     layoutPatterns,
-    animatedElements
+    animatedElements,
+    fluidResponsive: {
+      usesClamp: fluidData.clampExpressions.size > 0,
+      usesViewportUnits: fluidData.viewportUnitProperties.size > 0,
+      usesContainerQueries: fluidData.containerRules.length > 0,
+      clampExpressions: [...fluidData.clampExpressions].slice(0, 30),
+      viewportUnitProperties: [...fluidData.viewportUnitProperties].slice(0, 20),
+      containerRules: fluidData.containerRules
+    }
   };
 })();
