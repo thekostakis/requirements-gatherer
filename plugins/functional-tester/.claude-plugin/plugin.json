@@ -1,0 +1,11 @@
+{
+  "name": "functional-tester",
+  "version": "1.1.0",
+  "description": "Playwright functional test generator and runner for pages and visual flows. Writes end-to-end tests, runs them in a TDD-style fix loop, and audits pages with Lighthouse CI for accessibility, performance, and SEO. Auto-installs Playwright and Lighthouse if missing.",
+  "author": {
+    "name": "Chris Kostakis"
+  },
+  "repository": "https://github.com/thekostakis/requirements-gatherer",
+  "license": "MIT",
+  "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "accessibility", "performance", "seo", "testing"]
+}

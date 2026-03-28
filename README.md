@@ -1,10 +1,12 @@
 # requirements-gatherer
 
-A Claude Code plugin marketplace for product design and project planning workflows.
+A Claude Code plugin marketplace for product design, project planning, and testing workflows.
 
-## Skills
+## Plugins
 
 ### requirements-gatherer
+
+#### requirements-gatherer
 
 A senior product consultant that interviews you to understand what you want to build, then produces a structured `requirements.md` file. It defines WHAT and WHY, never HOW — no architecture, no tech recommendations, no implementation details.
 
@@ -26,7 +28,7 @@ Supports two modes:
 - In addendum mode, flags contradictions with existing requirements and traces ripple effects
 - Produces a structured document after a narrative playback and confirmation step
 
-### requirements-organizer
+#### requirements-organizer
 
 Reads a reviewed `requirements.md` or `requirements-addendum-*.md` and creates structured epics and issues in GitHub or Jira. You trigger this after reviewing and editing the requirements document.
 
@@ -50,7 +52,9 @@ Supports two modes:
 - Open questions become `needs-decision`-labeled issues
 - Verifies everything was created correctly before reporting the summary
 
-### visual-design-consultant
+### visual-design
+
+#### visual-design-consultant
 
 Establishes a project's visual design system through plain-language interview or by extracting patterns from example websites. Produces `design-guidelines.md` (core tokens, permanently in CLAUDE.md context) and a component compendium (`design/components/`) with detailed per-component specs.
 
@@ -63,13 +67,13 @@ Establishes a project's visual design system through plain-language interview or
 - Generates per-component spec files in design/components/
 - Supports addendum mode to update existing design systems
 
-### component-context
+#### component-context
 
 Loads the relevant component spec from the design compendium into context when implementing frontend components. Supports fuzzy matching — if no exact spec exists, suggests similar components ranked by relevance.
 
 **Trigger phrases:** "load component spec", "component design spec", "what does the design say about [component]", "design spec for [component]"
 
-### design-reviewer
+#### design-reviewer
 
 Senior creative director quality gate. Verifies implemented components match the design system through live Chrome browser inspection — visual comparison, CSS token compliance, axe accessibility audits, motion verification, and responsive behavior checks.
 
@@ -89,16 +93,19 @@ Senior creative director quality gate. Verifies implemented components match the
 
 ### functional-tester
 
-Generates and runs Playwright functional tests for pages and visual flows. Operates in a TDD-style loop: write tests, run them, fix failures, re-run.
+Generates and runs Playwright functional tests for pages and visual flows. Operates in a TDD-style loop: write tests, run them, fix failures, re-run. Includes Lighthouse CI audits for accessibility, performance, and SEO.
 
 **Trigger phrases:** "write functional tests", "create page tests", "playwright tests for this page", "test this page", "functional tests"
 
 **What it does:**
+- Auto-installs Playwright and Lighthouse if missing
 - Discovers testable behaviors by inspecting the live page and cross-referencing requirements
 - Presents a test plan for user confirmation before writing
 - Writes Playwright test files matching project conventions
 - Runs tests and classifies failures as test bugs vs implementation bugs
 - Fixes source code to pass tests (never weakens assertions), up to 3 cycles
+- Runs Lighthouse audits for accessibility, performance, and SEO (skips SEO behind login)
+- Best-effort fixes for critical Lighthouse issues
 
 ## Workflow
 
@@ -120,7 +127,13 @@ Later, when scope changes:
 1. Run visual-design-consultant     →  design-guidelines.md + design/components/ + CLAUDE.md updated
 2. Implement components              →  component-context skill loads specs automatically
 3. Run design-reviewer               →  live Chrome inspection + fix loop
-4. Run functional-tester             →  Playwright functional tests + TDD fix loop
+```
+
+## Functional Testing Workflow
+
+```
+1. Implement pages/routes            →  functional-tester triggers after visual work
+2. Run functional-tester             →  Playwright tests + TDD fix loop + Lighthouse audit
 ```
 
 ## Installation
@@ -136,6 +149,7 @@ Later, when scope changes:
 ```
 /plugin install requirements-gatherer@functional-design-tools
 /plugin install visual-design@functional-design-tools
+/plugin install functional-tester@functional-design-tools
 ```
 
 **Step 3:** Reload:
