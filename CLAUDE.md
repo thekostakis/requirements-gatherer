@@ -17,7 +17,7 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 Four plugins:
 - **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
 - **visual-design** (v2.2.0) — design system establishment, component spec delivery, design quality gate agent
-- **functional-tester** (v1.2.0) — Playwright test generation, TDD fix loop, Lighthouse/axe audits
+- **functional-tester** (v1.3.0) — Playwright test generation, TDD fix loop, Lighthouse/axe audits, agent
 - **defect-gatherer** (v1.1.0) — structured defect intake interview + issue tracker submission
 
 ## Plugin Authoring Conventions
