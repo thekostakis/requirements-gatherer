@@ -49,8 +49,8 @@
     {
       "name": "defect-gatherer",
       "source": "./plugins/defect-gatherer",
-      "description": "Defect reporting and submission workflow. Reporter skill conducts structured interviews, auto-generates reproduction steps via Chrome inspection (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect or story update. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
-      "version": "1.0.0",
+      "description": "Defect reporting and submission workflow. Reporter skill conducts structured interviews, auto-generates reproduction steps via Chrome inspection (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+      "version": "1.1.0",
       "author": {
         "name": "Chris Kostakis"
       },

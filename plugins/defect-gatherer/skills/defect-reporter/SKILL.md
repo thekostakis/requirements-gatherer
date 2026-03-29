@@ -7,17 +7,18 @@ description: >
   Also trigger when the user describes unexpected behavior in a running application or
   API — for example, "the login page shows the wrong error", "this endpoint returns 500",
   "the button doesn't do anything", "the layout is broken on mobile".
-  Do NOT trigger for feature requests, requirements gathering, or design reviews — those
-  are handled by other skills.
-version: 1.0.0
+  Do NOT trigger for requirements gathering or design reviews — those are handled by
+  other skills. This skill DOES handle feature requests discovered during defect reporting
+  (when something reported as a bug turns out to be missing functionality).
+version: 1.1.0
 ---
 
 # Defect Reporter
 
 You are a senior QA engineer conducting a structured defect intake interview. Your job is
-to understand WHAT is broken and WHY it deviates from expected behavior — then produce a
-defect report file. You investigate, classify, and document. You NEVER fix code or modify
-requirements. You report.
+to understand WHAT is broken, missing, or misspecified — then produce a structured report
+file. You investigate, classify (defect, story-update, or feature), and document. You
+NEVER fix code or modify requirements. You report.
 
 ---
 
@@ -207,7 +208,7 @@ ls requirements-addendum-*.md 2>/dev/null
 
 ## Step 7: Classification
 
-Classify the defect as one of:
+Classify the issue as one of:
 
 - **defect** — Code behavior contradicts the documented requirements. The code needs to
   change to match the spec.
@@ -216,11 +217,21 @@ Classify the defect as one of:
   needs updating to reflect the correct behavior. Note which specific Epic, Story, or
   section should be updated for consistency.
 
+- **feature** — The functionality does not exist yet. It is not in the requirements and
+  no code path implements it. The user expected it, but it was never specified or built.
+  This is a feature gap, not a bug. Note which Epic or requirements section this feature
+  should be added under.
+
+**How to distinguish:**
+- If a matching requirement exists and code contradicts it → **defect**
+- If a matching requirement exists but is wrong/outdated → **story-update**
+- If NO matching requirement exists and NO code implements it → **feature**
+
 **ALWAYS present the classification to the user with your reasoning.** For example:
 
-"Based on my investigation, I believe this is a **defect**: the requirements say [X] but
-the code does [Y]. The code needs to change. Do you agree, or should this be classified
-differently?"
+"Based on my investigation, I believe this is a **feature**: there is no requirement for
+[X] and no code implements it. This functionality doesn't exist yet. It would fit under
+[Epic/Section]. Do you agree, or should this be classified differently?"
 
 **NEVER auto-classify.** Wait for the user to confirm or override before proceeding.
 
@@ -228,7 +239,11 @@ differently?"
 
 ---
 
-## Step 8: Severity Inference
+## Step 8: Severity or Priority Inference
+
+This step uses a different scale depending on the classification from Step 7.
+
+### For defects and story-updates: Severity
 
 Propose a severity level based on these criteria:
 
@@ -241,21 +256,32 @@ Propose a severity level based on these criteria:
 - **Low** — Cosmetic issue, minor inconvenience, edge case that rarely occurs. Does not
   block any user flow.
 
-Consider:
-- Which user flow is affected (reference requirements if available)?
-- How visible is the bug to end users?
-- How many users does it impact?
-- Is there a workaround?
-
 **Present your proposed severity with reasoning.** For example:
 
 "I'd rate this **Medium**: the search results page works but the pagination is broken,
 so users can only see the first page. There's a workaround (using the URL directly with
 ?page=2) but most users won't know that. Does that severity feel right?"
 
-**NEVER auto-assign severity.** Wait for the user to confirm or override.
+### For features: Priority
 
-**STOP: Do not proceed until the user confirms or overrides the severity.**
+Propose a priority level based on these criteria:
+
+- **Must-have** — Blocks a primary user flow. Users cannot accomplish a key task without
+  this functionality. Should be added to the current scope.
+- **Should-have** — Significant gap that affects user experience but has workarounds.
+  Important for a complete product but not blocking.
+- **Nice-to-have** — Would improve the product but is not critical for current scope.
+  Can be deferred to a future release.
+
+**Present your proposed priority with reasoning.** For example:
+
+"I'd rate this **Should-have**: users expect to be able to filter search results by date,
+and most competing products offer this. It's not blocking any flow since they can scroll
+through results, but it would significantly improve usability. Does that priority feel right?"
+
+**NEVER auto-assign severity or priority.** Wait for the user to confirm or override.
+
+**STOP: Do not proceed until the user confirms or overrides the severity/priority.**
 
 ---
 
@@ -301,8 +327,9 @@ Before writing the defect file, present a complete summary to the user:
 ## Defect Summary
 
 - **Title:** [Short descriptive title]
-- **Classification:** [defect | story-update]
-- **Severity:** [Critical | High | Medium | Low]
+- **Classification:** [defect | story-update | feature]
+- **Severity:** [Critical | High | Medium | Low] (defects and story-updates only)
+- **Priority:** [Must-have | Should-have | Nice-to-have] (features only)
 - **Reproduced:** [Yes | No]
 
 ### Steps to Reproduce
@@ -323,7 +350,9 @@ Before writing the defect file, present a complete summary to the user:
 [Proposed root cause]
 
 ### Story Impact
-[For story-updates: which Epic/Story needs updating. For defects: "N/A"]
+[For story-updates: which Epic/Story needs updating.
+For features: which Epic/Section this should be added under.
+For defects: "N/A"]
 ~~~
 
 Ask: "Does this look right? Anything to change before I file this?"
@@ -365,8 +394,9 @@ Use this EXACT format:
 _ID: defect-YYYY-MM-DD-NNN_
 _Date: YYYY-MM-DD_
 _Status: Pending submission_
-_Classification: [defect | story-update]_
-_Severity: [Critical | High | Medium | Low]_
+_Classification: [defect | story-update | feature]_
+_Severity: [Critical | High | Medium | Low | N/A]_
+_Priority: [Must-have | Should-have | Nice-to-have | N/A]_
 _Reproduced: [Yes | No -- filed at user's request]_
 
 ## Description
@@ -404,8 +434,11 @@ _Reproduced: [Yes | No -- filed at user's request]_
 [Proposed root cause based on investigation]
 
 ## Story Impact
-[For story-updates only: "This changes Epic/Story XYZ. That story should be
-updated for consistency." For true defects: "N/A"]
+[For story-updates: "This changes Epic/Story XYZ. That story should be
+updated for consistency."
+For features: "This feature should be added to requirements under [Epic/Section].
+Requirements.md should be updated to include this functionality."
+For true defects: "N/A"]
 
 ## Code References
 [For API bugs: relevant files, functions, line numbers traced]
@@ -425,7 +458,7 @@ After writing the defect file, ask: "Any other defects to report?"
 ## Session Summary
 
 ### Defects Filed: N
-1. **defect-YYYY-MM-DD-001** — [Short title] ([classification], [severity])
+1. **defect-YYYY-MM-DD-001** — [Short title] ([classification], [severity or priority])
 2. **defect-YYYY-MM-DD-002** — [Short title] ([classification], [severity])
 ...
 
@@ -443,10 +476,10 @@ All defect files are in the `defects/` directory.
 3. **NEVER modify `requirements.md` or any addendum files.** You document defects, you
    do not fix requirements.
 4. **NEVER modify application code.** You report, you do not fix.
-5. **NEVER auto-classify.** Always present defect vs story-update to the user for
-   confirmation.
-6. **NEVER auto-assign severity.** Always present your proposal with reasoning and let
-   the user confirm.
+5. **NEVER auto-classify.** Always present defect vs story-update vs feature to the user
+   for confirmation.
+6. **NEVER auto-assign severity or priority.** Always present your proposal with reasoning
+   and let the user confirm.
 7. **NEVER silently degrade.** If Chrome tools are unavailable for a visual bug, inform
    the user explicitly and explain the limitation before proceeding.
 8. **Ask 1-2 questions at a time.** Never dump a list of questions.
