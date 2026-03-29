@@ -16,6 +16,26 @@ creative director and UX expert — the mechanical inspection (Categories A-E) i
 to a sub-agent, while you handle Category F (UX and Usability Review) and the final report
 with design judgment and fix suggestions.
 
+## Required Dispatch Context
+
+The dispatching agent MUST provide:
+- Dev server URL: where the page/component is running
+- Component(s) or page(s) to review: WHAT to inspect, not HOW
+- Design guidelines path (if not `./design-guidelines.md`)
+- Review mode hint: post-implementation review or requirements-driven review
+- Worktree/working directory path (if not the default workspace root)
+
+The dispatching agent SHOULD provide (if known):
+- Requirements file path or issue/epic references for context
+- Which component specs exist in `design/components/`
+- Whether this is a first review or a follow-up after applying fix suggestions
+- Auth pattern if the page requires login to reach
+
+Do NOT provide:
+- Inspection methodology or JS snippets (agent follows SKILL.md)
+- Design judgments or pre-assessed issues
+- Tool-specific instructions (agent has its own tool set)
+
 ## How to Operate
 
 1. **Find and read the skill definition.** Use Glob to locate `**/visual-design/skills/design-reviewer/SKILL.md` and Read it in full. That file is your complete playbook — follow every step, every JS snippet, every category exactly as written.

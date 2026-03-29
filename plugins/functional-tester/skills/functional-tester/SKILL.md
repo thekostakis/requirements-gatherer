@@ -9,7 +9,7 @@ description: >
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
   for non-visual/backend-only code. Includes Lighthouse CI and axe CLI audits for accessibility,
   performance, and SEO.
-version: 1.4.1
+version: 1.5.0
 ---
 
 # Functional Tester
@@ -49,7 +49,28 @@ Re-check after install. If the install fails (permissions, network): **STOP.** T
 
 ### Check 2: Dev Server Running
 
-Detect a running dev server on common ports by checking each in order:
+#### Server Discovery Priority
+
+Follow this order. Stop at the first successful match:
+
+1. **If the dispatch prompt or user specifies a server URL** → verify it with curl. Do NOT
+   start a new server or scan other ports:
+
+~~~bash
+curl -s -o /dev/null -w "%{http_code}" <PROVIDED_URL> 2>/dev/null | grep -q "[23]" && echo "VERIFIED: <PROVIDED_URL>" || echo "PROVIDED URL UNREACHABLE"
+~~~
+
+2. **If the dispatch prompt says servers are already running** → verify each mentioned
+   URL/port with curl. Do NOT start new ones.
+
+3. **Check for a reverse proxy** (nginx, caddy, traefik) before scanning direct ports.
+   If a proxy is in front, test through the proxy URL, not direct backend ports:
+
+~~~bash
+ls /etc/nginx/sites-enabled/ 2>/dev/null; ls /etc/caddy/ 2>/dev/null; test -f Caddyfile && echo "CADDY_CONFIG_FOUND"; docker ps 2>/dev/null | grep -i "nginx\|caddy\|traefik"
+~~~
+
+4. **Scan common ports** (3000, 3001, 4173, 5173, 5174, 8080):
 
 ~~~bash
 for port in 3000 3001 4173 5173 5174 8080; do
@@ -57,7 +78,14 @@ for port in 3000 3001 4173 5173 5174 8080; do
 done
 ~~~
 
-If no dev server is detected: **STOP.** Tell the user:
+5. **If SSL/self-signed certs are involved** → use `curl -k` for verification and note
+   that Playwright will need HTTPS error ignoring configured in `playwright.config`:
+
+~~~bash
+curl -sk -o /dev/null -w "%{http_code}" https://localhost:443 2>/dev/null | grep -q "[23]" && echo "FOUND HTTPS on 443"
+~~~
+
+If no dev server is detected on any port and no URL was provided: **STOP.** Tell the user:
 
 - "No dev server detected on ports 3000, 3001, 4173, 5173, 5174, or 8080."
 - "Please start your dev server and tell me the URL, or say 'retry' once it is running."
@@ -175,6 +203,49 @@ Confirm this test plan? I'll write and run these tests.
 
 **STOP gate:** Wait for user confirmation before writing any tests. Do not proceed
 until the user approves or modifies the test plan.
+
+---
+
+## Step 3b: Read Existing Tests
+
+If existing test files were provided in the dispatch prompt, or if test files are discovered
+during the convention detection below, read them BEFORE writing new tests.
+
+### 1. Read Existing Tests to Understand Patterns
+
+~~~bash
+find . -name "*.spec.ts" -o -name "*.spec.js" -o -name "*.test.ts" -o -name "*.test.js" | head -10
+~~~
+
+For each discovered test file, Read it and extract:
+- Auth patterns: how tests log in, session setup, fixtures, storage state
+- Helper functions and utilities: custom commands, shared setup/teardown, page objects
+- Selector conventions: `data-testid`, aria roles, CSS classes, custom locator strategies
+- Base URL configuration: hardcoded, env var, Playwright config
+- Any shared state or test fixtures (global setup files, auth state files)
+
+### 2. Run Existing Tests Before Writing New Ones
+
+~~~bash
+npx playwright test [existing-test-files] --reporter=list
+~~~
+
+- If existing tests **PASS** → use them as patterns for new tests. Adopt their auth flow,
+  selector strategy, and structural conventions.
+- If existing tests **FAIL** → diagnose the environment before writing any new code. See
+  the Escalation Triggers in Step 5 — if all existing tests fail at the same step, this is
+  an environment issue, not a test issue.
+- If existing tests are for a **different page** → still read them for auth/helper patterns.
+  Do not run them as part of your validation.
+
+### 3. Adopt Discovered Conventions
+
+When writing new tests in Step 4, match the patterns found in existing tests:
+- Same file naming convention and directory structure
+- Same `test.describe` / `test.beforeEach` patterns
+- Same selector strategy (prefer the project's established approach)
+- Same auth flow (reuse existing auth fixtures or storage state)
+- Same base URL configuration approach
 
 ---
 
@@ -347,6 +418,35 @@ implementation -- do not remove the assertion. Only modify a test if the test it
 has an actual bug (wrong selector, wrong URL, race condition, typo in expected text).
 
 **Never modify tests that are already passing.**
+
+### Escalation Triggers (early exit -- do not burn fix cycles)
+
+These patterns indicate an environment or configuration issue, not a test or implementation
+bug. Stop immediately and escalate to the user or orchestrator — do not attempt test fixes:
+
+- **All tests fail at the same auth/setup step** → environment issue (wrong URL, auth not
+  configured, server not running the expected app). Report: "All N tests fail at [step].
+  This appears to be an environment/auth configuration issue, not a test bug."
+
+- **Server returns 404/500 for all routes** → wrong server, wrong port, or app not built.
+  Report: "Server at [URL] returns [status] for all tested routes."
+
+- **Cannot determine page structure** (`read_page` returns empty or minimal DOM) → page
+  may need JS hydration time, may be behind auth, or may be a SPA that hasn't loaded.
+  Try waiting 3 seconds and re-reading. If still empty after retry, escalate: "Page DOM
+  is empty or minimal after retry. Possible causes: SPA not hydrated, auth required,
+  wrong URL."
+
+- **Playwright cannot connect to browser** → browser not installed or system dependency
+  missing. Do not retry more than once. Report exact error.
+
+- **Server won't start after 2 attempts** → escalate for server details. Do not keep
+  retrying.
+
+- **Existing tests (from Step 3b) all fail at the same point** → environment is not
+  properly configured for testing. Do not write new tests until the environment is fixed.
+  Report: "All existing tests fail at [step]. Environment needs configuration before new
+  tests can be written."
 
 ---
 
