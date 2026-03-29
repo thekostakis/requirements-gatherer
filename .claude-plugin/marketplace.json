@@ -45,6 +45,19 @@
       "license": "MIT",
       "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "axe", "wcag", "accessibility", "performance", "seo", "testing"],
       "category": "testing"
+    },
+    {
+      "name": "defect-gatherer",
+      "source": "./plugins/defect-gatherer",
+      "description": "Defect reporting and submission workflow. Reporter skill conducts structured interviews, auto-generates reproduction steps via Chrome inspection (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect or story update. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Chris Kostakis"
+      },
+      "repository": "https://github.com/thekostakis/requirements-gatherer",
+      "license": "MIT",
+      "keywords": ["defect", "bug", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability"],
+      "category": "quality"
     }
   ]
 }

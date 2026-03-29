@@ -1,0 +1,11 @@
+{
+  "name": "defect-gatherer",
+  "version": "1.0.0",
+  "description": "Defect reporting interview + issue tracker submission",
+  "author": {
+    "name": "Chris Kostakis"
+  },
+  "repository": "https://github.com/thekostakis/requirements-gatherer",
+  "license": "MIT",
+  "keywords": ["defect", "bug", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab"]
+}
