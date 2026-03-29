@@ -8,7 +8,7 @@ description: >
   system", "visual review", "run design tests", "implement epic", "implement milestone",
   "implement feature", "perform a design review of [requirements]".
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
-version: 3.0.0
+version: 3.0.1
 ---
 
 # Design Reviewer

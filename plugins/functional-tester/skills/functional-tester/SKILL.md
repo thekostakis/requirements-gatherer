@@ -9,7 +9,7 @@ description: >
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
   for non-visual/backend-only code. Includes Lighthouse CI and axe CLI audits for accessibility,
   performance, and SEO.
-version: 1.4.0
+version: 1.4.1
 ---
 
 # Functional Tester
