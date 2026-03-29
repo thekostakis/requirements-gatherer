@@ -9,7 +9,7 @@ description: >
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
   for non-visual/backend-only code. Includes Lighthouse CI and axe CLI audits for accessibility,
   performance, and SEO.
-version: 1.2.0
+version: 1.4.0
 ---
 
 # Functional Tester
@@ -53,7 +53,7 @@ Detect a running dev server on common ports by checking each in order:
 
 ~~~bash
 for port in 3000 3001 4173 5173 5174 8080; do
-  (echo >/dev/tcp/localhost/$port) 2>/dev/null && echo "FOUND on port $port" && break
+  curl -s -o /dev/null -w "%{http_code}" http://localhost:$port 2>/dev/null | grep -q "[23]" && echo "FOUND on port $port" && break
 done
 ~~~
 
@@ -426,50 +426,202 @@ node -e "
 "
 ~~~
 
-Clean up the report file:
+### 6b-post: Performance Early Exit Check
+
+If the performance score is already above 90, skip the performance deep-dive (Steps 6c-pre through 6c-3) entirely. Note in the report: "Performance score XX/100 — above threshold, no performance analysis performed." Still proceed with accessibility and SEO analysis regardless of performance score.
+
+### 6c-pre: Detect Tech Stack
+
+Before performance analysis, identify the project's technology stack:
+
+~~~bash
+node -e "
+  const pkg = JSON.parse(require('fs').readFileSync('./package.json', 'utf8'));
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  const stack = [];
+  if (deps['next']) stack.push('Next.js');
+  else if (deps['react']) stack.push('React');
+  if (deps['vue'] || deps['nuxt']) stack.push('Vue/Nuxt');
+  if (deps['svelte'] || deps['@sveltejs/kit']) stack.push('Svelte/SvelteKit');
+  if (deps['@angular/core']) stack.push('Angular');
+  if (deps['astro']) stack.push('Astro');
+  if (deps['vite']) stack.push('Vite');
+  if (deps['webpack']) stack.push('Webpack');
+  if (deps['tailwindcss']) stack.push('Tailwind');
+  if (deps['express']) stack.push('Express');
+  if (deps['fastify']) stack.push('Fastify');
+  if (deps['@nestjs/core']) stack.push('NestJS');
+  if (deps['prisma'] || deps['@prisma/client']) stack.push('Prisma ORM');
+  if (deps['drizzle-orm']) stack.push('Drizzle ORM');
+  if (deps['typeorm']) stack.push('TypeORM');
+  if (deps['sequelize']) stack.push('Sequelize');
+  if (deps['mongoose'] || deps['mongodb']) stack.push('MongoDB');
+  if (deps['pg'] || deps['postgres']) stack.push('PostgreSQL');
+  if (deps['mysql2'] || deps['mysql']) stack.push('MySQL');
+  if (deps['redis'] || deps['ioredis']) stack.push('Redis');
+  console.log(JSON.stringify({ frameworks: stack, allDeps: Object.keys(deps).slice(0, 40) }));
+"
+~~~
+
+Use WebSearch to look up current performance best practices for the detected tech stack
+(e.g., "Next.js performance optimization", "Prisma query optimization best practices").
+Use these framework-specific techniques to inform the fix suggestions in the report.
+
+### 6c-1: Network Waterfall Analysis
+
+Extract network timing data from the Lighthouse JSON (still available from 6b — do NOT
+delete `lighthouse-report.json` until after this step):
+
+~~~bash
+node -e "
+  const r = JSON.parse(require('fs').readFileSync('./lighthouse-report.json', 'utf8'));
+  const items = r.audits['network-requests']?.details?.items || [];
+  const apiCalls = items
+    .filter(i => i.resourceType === 'Fetch' || i.resourceType === 'XHR')
+    .map(i => ({
+      url: i.url,
+      duration: Math.round(i.endTime - i.startTime),
+      transferSize: i.transferSize,
+      statusCode: i.statusCode
+    }))
+    .sort((a, b) => b.duration - a.duration);
+  const slowRequests = items
+    .filter(i => (i.endTime - i.startTime) > 500)
+    .map(i => ({ url: i.url, duration: Math.round(i.endTime - i.startTime), type: i.resourceType, size: i.transferSize }))
+    .sort((a, b) => b.duration - a.duration);
+  console.log(JSON.stringify({ totalRequests: items.length, apiCalls: apiCalls.slice(0, 20), slowRequests: slowRequests.slice(0, 10) }, null, 2));
+"
+~~~
+
+If Chrome MCP tools are available, also call `mcp__claude-in-chrome__read_network_requests`
+to capture the live network waterfall for real browser timing data.
+
+Classify each API call:
+- **First-party API** — same origin as dev server, or matches patterns in project route files
+- **Third-party API** — external domains (CDN, analytics, auth providers, etc.)
+- **Static asset** — fonts, images, CSS, JS bundles
+
+For slow first-party API calls (> 500ms), proceed to the backend analysis in 6c-2.
+
+Clean up the report file after extraction:
 
 ~~~bash
 rm -f ./lighthouse-report.json
 ~~~
 
-### 6c: Best-Effort Fix Loop for Critical Issues
+### 6c-2: API Trace-Back to Backend Code
 
-Review all critical Lighthouse audit failures (score = 0) and attempt fixes.
+For each slow first-party API endpoint identified in 6c-1:
 
-**Accessibility fixes:**
+1. **Find the route handler.** Use Grep to search the codebase for the API route path.
+   Adapt search patterns based on the detected framework:
+   - Express/Fastify: `router.get('/api/endpoint'` or `app.get(`
+   - Next.js: `app/api/endpoint/route.ts` or `pages/api/endpoint.ts`
+   - NestJS: `@Get('endpoint')` or `@Controller('api')`
+
+2. **Read the route handler** and trace the data flow. Identify:
+   - Database queries (ORM calls, raw SQL, collection queries)
+   - External API calls the handler makes
+   - Missing caching (no Redis/in-memory cache on frequently-read data)
+   - N+1 query patterns (queries inside loops, `.map()` with await, etc.)
+   - Missing pagination on large result sets
+   - Sequential awaits that could be parallelized with `Promise.all`
+
+3. **Use WebSearch** for framework-specific and ORM-specific optimization techniques
+   (e.g., "Prisma N+1 query optimization", "Express response caching best practices").
+
+Produce fix suggestions: directive-level for complex architectural changes, code-level
+for simple optimizations (e.g., adding `Promise.all`, adding a `select` clause).
+
+### 6c-3: Database Query Analysis
+
+If the project uses an ORM or database client (detected in 6c-pre):
+
+1. **Static analysis of query patterns.** Read model/schema files and query call sites:
+   - Prisma: read `schema.prisma` for missing `@@index` declarations, read call sites
+     for `.findMany` without `select`/`take`, nested includes without limits
+   - Drizzle/TypeORM/Sequelize: missing indexes, unbounded queries, eager loading everything
+   - Raw SQL (`pg`, `mysql2`): `SELECT *`, missing WHERE clauses, missing LIMIT,
+     joins without indexes
+   - MongoDB/Mongoose: missing indexes in schema, `.find({})` without projection,
+     missing `.lean()`
+
+2. **Runtime query analysis (if local database is accessible).** Check if a local
+   database is running:
+
+~~~bash
+# PostgreSQL
+psql --version 2>/dev/null && (pg_isready -q 2>/dev/null && echo "POSTGRES_LOCAL" || echo "POSTGRES_NOT_RUNNING") || echo "NO_PSQL"
+
+# MySQL
+mysql --version 2>/dev/null && (mysqladmin ping -s 2>/dev/null && echo "MYSQL_LOCAL" || echo "MYSQL_NOT_RUNNING") || echo "NO_MYSQL"
+
+# MongoDB
+mongosh --version 2>/dev/null && (mongosh --eval "db.runCommand({ping:1})" --quiet 2>/dev/null && echo "MONGO_LOCAL" || echo "MONGO_NOT_RUNNING") || echo "NO_MONGOSH"
+~~~
+
+   If a local database IS accessible and slow queries were identified:
+   - **PostgreSQL:** Run `EXPLAIN ANALYZE` on the slow query patterns found in source
+     code. Check for sequential scans on large tables, missing indexes, inefficient joins.
+   - **MySQL:** Run `EXPLAIN` on slow queries. Check for full table scans, missing indexes.
+   - **MongoDB:** Use `.explain("executionStats")` on slow query patterns. Check for
+     collection scans (COLLSCAN vs IXSCAN).
+
+   If a local database is NOT accessible: **STOP the runtime analysis portion.** Report
+   the slow query patterns found via static analysis and recommend the user run EXPLAIN
+   manually. Present the exact queries to run. Do NOT silently skip — tell the user what
+   was found statically and what could not be verified at runtime.
+
+3. **Check connection pooling configuration.** Read config files for pool settings:
+   - Prisma: check for `connection_limit` in DATABASE_URL or `datasources` config
+   - pg/node-postgres: check for `Pool` configuration (max, idleTimeoutMillis)
+   - Mongoose: check for `poolSize` or `maxPoolSize` in connection options
+
+### 6c: Lighthouse Fix Suggestions
+
+After all analysis is complete (6c-pre through 6c-3), produce categorized fix suggestions.
+Do NOT apply any fixes. The caller will read this report and apply them.
+
+For each Lighthouse critical failure (score = 0) and warning (score < 0.5), produce a
+fix suggestion using mixed detail:
+
+**Code-level suggestions** (for straightforward fixes — include exact file, line, and change):
 - Missing `lang` attribute on `<html>` → add it
 - Missing meta viewport → add `<meta name="viewport" content="width=device-width, initial-scale=1">`
 - Missing document title → add `<title>` tag
-- Broken heading hierarchy (skipped levels) → fix heading levels
+- Broken heading hierarchy → fix heading levels
 - Missing image alt text → add descriptive `alt` attributes
 - Missing form labels → add `<label>` elements or `aria-label` attributes
-- Low contrast text → adjust colors (reference design-guidelines.md tokens if available)
-
-**Performance fixes:**
 - Images missing width/height → add explicit dimensions
 - Below-fold images without lazy loading → add `loading="lazy"`
 - Render-blocking scripts → add `defer` or `async` attributes
-- Missing meta viewport (also performance) → add the tag
-- Large uncompressed assets → note in report (cannot fix at source level)
-
-**SEO fixes (only if NOT behind login):**
 - Missing meta description → add `<meta name="description" content="...">`
 - Missing canonical link → add `<link rel="canonical" href="...">`
-- Non-crawlable links → fix `href` attributes
-- Bad heading hierarchy → fix structure (same fix as accessibility)
 
-**Fix cycle:**
-1. Apply all fixable issues in one batch.
-2. Re-run Lighthouse with the same categories.
-3. Compare scores — note improvements.
-4. If new critical issues emerged or fixes broke something, apply another round.
+**Directive-level suggestions** (for complex changes — describe approach and tradeoffs):
+- Low contrast text → reference design-guidelines.md tokens if available, suggest specific
+  color adjustments that maintain design intent
+- Large uncompressed assets → recommend build-level optimization (framework-specific)
+- Slow API calls → reference findings from 6c-2 with specific handler and query details
+- Missing indexes → reference findings from 6c-3 with specific schema changes
+- Framework-specific optimizations → reference WebSearch findings from 6c-pre
 
-**Maximum 2 fix cycles** for Lighthouse issues. This is a separate budget from the
-Playwright test loop's 3 cycles. After 2 cycles, include remaining issues in the report
-as "noted — remediation needed" with specific instructions.
+**Categorize each suggestion as:**
+- **Safe fix** — no impact on functionality, usability, or UI. Caller should apply.
+- **Performance — functionality change needed** — would impact UX. Include potential
+  solutions and tradeoffs. Do NOT apply.
 
-**NEVER fix issues by removing content or functionality.** Only add missing attributes,
-tags, meta elements, or optimizations.
+**SEO suggestions (only if NOT behind login):**
+- Missing meta description, missing canonical link, non-crawlable links, bad heading hierarchy
+
+**Performance score directive:**
+- If < 90: "Performance score is XX/100 (below 90 threshold). Recommended safe fixes
+  should be applied. Continue attempting fixes that do not degrade usability, functionality,
+  or UI."
+- If >= 90: "Performance score XX/100 — above threshold, no performance fixes needed."
+
+**NEVER suggest fixes that remove content or functionality.** Only suggest adding missing
+attributes, tags, meta elements, optimizations, or architectural improvements.
 
 ---
 
@@ -505,36 +657,31 @@ Clean up the report file:
 rm -f ./axe-report.json
 ~~~
 
-### 7b: Best-Effort Fix Loop for axe Violations
+### 7b: axe Fix Suggestions
 
-Review all WCAG violations and attempt fixes, prioritizing by impact (critical > serious > moderate > minor):
+Review all WCAG violations and produce categorized fix suggestions, prioritizing by
+impact (critical > serious > moderate > minor). Do NOT apply any fixes.
 
-**Common fixes:**
-- Missing alt text → add descriptive `alt` attributes
-- Missing form labels → add `<label>` elements or `aria-label`
+**Code-level suggestions** (most axe violations are straightforward):
+- Missing alt text → add descriptive `alt` attributes (specify which element and suggested text)
+- Missing form labels → add `<label>` elements or `aria-label` (specify which input)
 - Missing landmark roles → add `role` or use semantic HTML (`<main>`, `<nav>`, `<header>`)
 - Color contrast → adjust colors (reference design-guidelines.md tokens if available)
 - Missing lang attribute → add `lang` to `<html>`
 - Empty buttons/links → add text content or `aria-label`
-- Duplicate IDs → make IDs unique
+- Duplicate IDs → make IDs unique (list the duplicates)
 - Missing heading hierarchy → fix heading levels
 
-**Fix cycle:**
-1. Apply all fixable issues in one batch.
-2. Re-run axe CLI with the same flags.
-3. Compare violation counts — note improvements.
-4. If new violations emerged or fixes broke something, apply another round.
+**Categorize each suggestion as:**
+- **Safe fix** — no impact on functionality, usability, or UI. Caller should apply.
+- **Accessibility — design change needed** — would require visual design changes (e.g.,
+  color contrast that conflicts with brand colors). Include alternative approaches.
 
-**Maximum 2 fix cycles** for axe violations. This is a separate budget from both the
-Playwright test loop (max 3) and Lighthouse fix loop (max 2). After 2 cycles, include
-remaining violations in the report as "noted — remediation needed" with specific instructions.
+**De-duplicate with Lighthouse:** If a violation overlaps with a Lighthouse finding
+already reported in Step 6c, reference the earlier suggestion rather than duplicating it.
 
-**NEVER fix accessibility issues by removing content or functionality.** Only add missing
-attributes, labels, roles, or adjust styles.
-
-**De-duplicate with Lighthouse:** If a violation was already fixed during the Lighthouse
-accessibility fixes (Step 6c), it should already pass. Do not double-count fixed issues
-in the report.
+**NEVER suggest fixing accessibility issues by removing content or functionality.** Only
+suggest adding missing attributes, labels, roles, or adjusting styles.
 
 ---
 
@@ -573,26 +720,51 @@ Present the final report using this format:
 | Performance | XX/100 | PASS / WARN / FAIL |
 | SEO | XX/100 or N/A | PASS / WARN / FAIL / Skipped (behind login) |
 
-#### Critical Issues Fixed
-- [file:line] — [what was changed and why]
+#### Suggested Fixes (safe)
+- **[audit-id]:** [file:line] — [what to change and why]
 
-#### Issues Not Fixed (remediation needed)
-- **[audit-id]:** [description] — [remediation instructions]
+#### Suggested Fixes (functionality change needed)
+- **[audit-id]:** [description] — [recommended approach and tradeoffs]
+
+### Performance Deep-Dive
+
+#### Tech Stack: [detected frameworks, ORMs, databases]
+
+#### Network Waterfall
+| Endpoint | Duration | Size | Type | Classification |
+|----------|----------|------|------|---------------|
+| /api/... | XXXms | XXkB | XHR | First-party / slow |
+
+#### Slow API Analysis
+- **[endpoint]:** Handler at [file:line]
+  - Root cause: [N+1 query / sequential awaits / missing cache / etc.]
+  - Fix suggestion: [code-level or directive-level]
+  - Category: Safe fix / Functionality change needed
+
+#### Database Analysis
+- **[table/collection]:** [missing index / unbounded query / etc.]
+  - Query pattern: [the problematic query]
+  - EXPLAIN result: [if available] OR Static analysis only: [recommend running EXPLAIN]
+  - Fix suggestion: [code-level or directive-level]
+  - Category: Safe fix / Functionality change needed
+
+#### Performance Fixes Not Applied (architecture change needed)
+- **[issue]:** [description] — [recommended approach and tradeoffs]
 
 ### axe Accessibility Audit
 
 | Impact | Violations | Status |
 |--------|-----------|--------|
-| Critical | X | Fixed / Remaining |
-| Serious | X | Fixed / Remaining |
-| Moderate | X | Fixed / Remaining |
-| Minor | X | Fixed / Remaining |
+| Critical | X | Suggestion provided |
+| Serious | X | Suggestion provided |
+| Moderate | X | Suggestion provided |
+| Minor | X | Suggestion provided |
 
-#### axe Violations Fixed
-- [file:line] — [what was changed and why]
+#### Suggested Fixes (safe)
+- **[rule-id]:** [file:line] — [what to change and why]
 
-#### axe Violations Not Fixed (remediation needed)
-- **[rule-id]:** [description] — [remediation instructions]
+#### Suggested Fixes (design change needed)
+- **[rule-id]:** [description] — [recommended approach and alternatives]
 ~~~
 
 ---
@@ -615,11 +787,14 @@ Present the final report using this format:
    design-reviewer skill.
 8. **NEVER run SEO audits on pages behind authentication.** Search engines cannot crawl
    authenticated pages, making SEO scores misleading.
-9. **NEVER fix Lighthouse issues by removing content or functionality.** Only add missing
-   attributes, tags, meta elements, or optimizations.
-10. **Lighthouse fix cycles (max 2) are separate from Playwright test fix cycles (max 3).**
-    Each has its own budget.
-11. **NEVER fix axe violations by removing content or functionality.** Only add missing
-    attributes, labels, roles, or styles.
-12. **axe fix cycles (max 2) are separate from Playwright (max 3) and Lighthouse (max 2).**
-    Each has its own budget.
+9. **NEVER suggest Lighthouse fixes that remove content or functionality.** Only suggest
+   adding missing attributes, tags, meta elements, or optimizations.
+10. **Lighthouse and axe sections are report-only.** Produce categorized fix suggestions
+    but do NOT apply any changes. The Playwright TDD loop (Steps 2-5) is the only section
+    that applies fixes directly.
+11. **NEVER suggest axe fixes that remove content or functionality.** Only suggest adding
+    missing attributes, labels, roles, or styles.
+12. **ALWAYS detect the project's tech stack before performance analysis** and use
+    WebSearch to find framework-specific optimization techniques.
+13. **ALWAYS classify fix suggestions** as "safe fix" or "functionality/design change
+    needed" so the caller knows which to apply immediately.

@@ -1,11 +1,11 @@
 {
   "name": "visual-design",
-  "version": "2.2.0",
-  "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via Chrome browser inspection. Update-component-index skill for regenerating the component compendium index.",
+  "version": "3.0.0",
+  "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via Chrome browser inspection — now includes Category F UX and Usability Review (visual hierarchy, information architecture, navigation, cognitive load, cross-breakpoint consistency, interaction feedback, content readability at desktop and mobile). Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["design-system", "visual-design", "chrome", "accessibility", "axe", "design-tokens", "components", "responsive", "motion", "animations", "agent"]
+  "keywords": ["design-system", "visual-design", "chrome", "accessibility", "axe", "design-tokens", "components", "responsive", "motion", "animations", "agent", "ux", "usability"]
 }
