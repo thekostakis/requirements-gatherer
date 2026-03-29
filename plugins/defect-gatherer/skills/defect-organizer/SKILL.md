@@ -8,7 +8,7 @@ description: >
   from defects". Also trigger when the user has defect files in the defects/ directory
   and wants to submit them to GitHub, Jira, Linear, or GitLab. Do NOT trigger for
   defect reporting or investigation — that is the defect-reporter skill.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Defect Organizer
@@ -32,7 +32,8 @@ You may NOT proceed past a STOP gate until the condition is met.
 3. List all `defect-*.md` files. Exclude the `.archived/` subdirectory.
 4. Read each file and summarize:
    - Total defects found
-   - For each defect: ID, title, classification (defect or story-update), severity
+   - For each defect: ID, title, classification (defect, story-update, or feature),
+     severity (defects/story-updates) or priority (features)
 5. Also check for `requirements.md` in the working directory — if it exists, read it
    for context (requirement references, feature areas, acceptance criteria).
 
@@ -111,19 +112,21 @@ Present the submission plan in EXACTLY this format:
 
 ### Platform: [GitHub/Jira/Linear/GitLab] ([repo/project])
 
-| # | Defect Title | Classification | Severity | Target Epic/Milestone | Issue Type | Linked Requirement |
-|---|-------------|---------------|----------|----------------------|------------|-------------------|
+| # | Title | Classification | Severity/Priority | Target Epic/Milestone | Issue Type | Linked Requirement |
+|---|-------|---------------|-------------------|----------------------|------------|-------------------|
 | 1 | [title] | defect | High | Epic 2: [Name] | Bug | #[issue] |
 | 2 | [title] | story-update | Medium | Epic 1: Foundations | Story/Task | #[issue] |
+| 3 | [title] | feature | Must-have | Epic 3: [Name] | Story/Feature | — |
 
 ### New Epics/Milestones Required
 - [Name] — [reason]
-(or "None — all defects matched to existing epics")
+(or "None — all items matched to existing epics")
 
 ### Actions Summary
 - Issues to create: [count]
 - Bug-type issues: [count]
 - Story-update issues: [count]
+- Feature issues: [count]
 - New milestones/epics: [count]
 ```
 
@@ -147,6 +150,7 @@ Do not skip or reorder these sub-steps. Verify each sub-step before moving to th
 Create these labels if they don't already exist:
 - `defect` label (red color, e.g., D73A4A)
 - `story-update` label (yellow color, e.g., FEF2C0)
+- `feature` label (green color, e.g., 0E8A16)
 - Severity labels: `severity-critical` (dark red, e.g., B60205), `severity-high` (red, e.g., D73A4A), `severity-medium` (orange, e.g., E99695), `severity-low` (yellow, e.g., FEF2C0)
 
 Check if each label exists first: `gh label list --repo OWNER/REPO`
@@ -249,6 +253,46 @@ _Filed via defect-gatherer plugin_
 _Source: [defect file ID]_
 ```
 
+For **features**:
+```
+gh issue create --repo OWNER/REPO \
+  --title "Feature: [title]" \
+  --milestone "[Epic N: Name]" \
+  --label "feature" \
+  --body "BODY"
+```
+
+Issue body template for features:
+
+```
+## Feature Request
+
+**Priority:** [Must-have / Should-have / Nice-to-have]
+
+## Description
+[Description from defect report]
+
+## User Expectation
+[What the user expected to be able to do]
+
+## Current State
+[What actually exists — nothing, or partial implementation]
+
+## Suggested Behavior
+[How the feature should work based on user's description and existing patterns]
+
+## Requirements Impact
+This feature should be added to requirements under [Epic/Section].
+Requirements.md should be updated to include this functionality.
+
+## Requirement Reference
+Related epic: [Epic N: Name]
+Related area: [requirement section, if identifiable]
+
+_Filed via defect-gatherer plugin_
+_Source: [defect file ID]_
+```
+
 **Sub-step 5a.4: Verify**
 
 ```
@@ -264,12 +308,13 @@ Use Jira MCP tools:
 1. **Create issues with native types:**
    - True defects: Issue type = "Bug"
    - Story updates: Issue type = "Story" or "Task"
+   - Features: Issue type = "Story"
 
 2. **Set priority field:**
-   - Critical = Blocker
-   - High = Critical (Jira priority)
-   - Medium = Major
-   - Low = Minor
+   - For defects/story-updates (severity mapping):
+     Critical = Blocker, High = Critical, Medium = Major, Low = Minor
+   - For features (priority mapping):
+     Must-have = Critical, Should-have = Major, Nice-to-have = Minor
 
 3. **Link to parent epic.**
 
@@ -283,13 +328,14 @@ Use Linear CLI, MCP, or API (whichever was detected):
 
 1. **Create issues:**
    - True defects: Add "Bug" label
-   - Story updates: Add "Improvement" or "Feature" label
+   - Story updates: Add "Improvement" label
+   - Features: Add "Feature" label
 
 2. **Set priority:**
-   - Critical = Urgent (0)
-   - High = High (1)
-   - Medium = Medium (2)
-   - Low = Low (3)
+   - For defects/story-updates (severity mapping):
+     Critical = Urgent (0), High = High (1), Medium = Medium (2), Low = Low (3)
+   - For features (priority mapping):
+     Must-have = High (1), Should-have = Medium (2), Nice-to-have = Low (3)
 
 3. **Assign to project** (equivalent of epic).
 
@@ -302,8 +348,9 @@ Use glab CLI, MCP, or API:
 1. **Create issues:**
    - True defects: Label `bug`
    - Story updates: Label `story-update`
+   - Features: Label `feature`
 
-2. **Severity labels:** `severity::critical`, `severity::high`, `severity::medium`, `severity::low`
+2. **Severity labels** (defects/story-updates only): `severity::critical`, `severity::high`, `severity::medium`, `severity::low`. Features do not get severity labels.
 
 3. **Assign to milestone.**
 
@@ -344,8 +391,8 @@ After all issues are created, archived, and verified, output this summary:
 **Defects failed:** [count] (if any)
 
 ### Created Issues
-| Defect ID | Title | Type | Severity | Issue Link | Epic/Milestone |
-|-----------|-------|------|----------|------------|----------------|
+| Defect ID | Title | Type | Severity/Priority | Issue Link | Epic/Milestone |
+|-----------|-------|------|-------------------|------------|----------------|
 | [id] | [title] | defect | High | [link] | [epic] |
 
 ### Failed Submissions (if any)
@@ -363,6 +410,7 @@ After all issues are created, archived, and verified, output this summary:
 1. Review created issues in [platform]
 2. [If failures] Resolve issues and re-run defect-organizer
 3. Story-update issues require updating the corresponding requirement/story
+4. Feature issues require adding the feature to requirements.md
 ```
 
 ---
@@ -385,7 +433,7 @@ and correct before continuing.
    don't invent.
 7. **Verify after creation.** Always confirm issues were created with correct labels,
    milestones, and types.
-8. **Use distinct issue types/labels for defects vs story-updates.** They must be clearly
-   distinguishable in the system of record.
+8. **Use distinct issue types/labels for defects vs story-updates vs features.** They must
+   be clearly distinguishable in the system of record.
 9. **Always link to requirements.** Every submitted issue must reference the violated
    requirement (if one was identified in the defect report).

@@ -19,7 +19,7 @@ A Claude Code plugin containing two interactive skills. The defect-reporter cond
 structured interview when a user encounters a bug, automatically generates reproduction
 steps using browser inspection (visual bugs) or code tracing (API bugs), cross-references
 the project's requirements to identify what's violated, classifies the issue as a true
-defect or a story update, and produces a temporary structured file. The defect-organizer
+defect, story update, or feature request, and produces a temporary structured file. The defect-organizer
 then takes those files, matches them to existing epics/milestones, formats them for the
 target issue tracker (GitHub, Jira, Linear, or GitLab), submits them, and archives the
 local files.
@@ -64,12 +64,16 @@ have to re-invoke the skill for each defect.
 - Given I finish reporting one defect, when prompted "Any other defects to report?",
   then I can describe another and the skill creates a separate file for each
 
-**As a** developer, **I want** the defect to be classified as either a true defect or a
-story update **so that** the right action is taken (fix code vs update requirements).
+**As a** developer, **I want** the issue to be classified as a defect, story update, or
+feature **so that** the right action is taken (fix code, update requirements, or build
+new functionality).
 **Acceptance criteria:**
 - Given a bug where code doesn't match the spec, then it's classified as "defect"
 - Given a bug where the spec itself needs updating, then it's classified as "story-update"
   and the report notes which epic/story should be updated for consistency
+- Given a report where no requirement or code exists for the expected functionality,
+  then it's classified as "feature" and the report notes which epic/section it should
+  be added under, with a note that requirements should be updated
 - Given the classification, the user must confirm or override before the report is finalized
 
 **As a** developer, **I want** defects submitted to my team's issue tracker in the
@@ -99,8 +103,8 @@ there's full traceability from requirement to defect.
 4. Skill navigates to the affected page, takes screenshots
 5. Skill inspects: computed CSS, console errors, network requests, DOM structure
 6. Skill reads requirements.md to identify violated requirement/acceptance criteria
-7. Skill proposes: severity (Critical/High/Medium/Low), classification (defect vs
-   story-update), steps to reproduce, requirement reference, root cause hypothesis
+7. Skill proposes: severity or priority, classification (defect vs story-update vs
+   feature), steps to reproduce, requirement reference, root cause hypothesis
 8. User verifies each proposed element, confirms or corrects
 9. Skill writes temp file to `defects/defect-YYYY-MM-DD-NNN.md`
 10. Skill asks "Any other defects to report?"
@@ -158,11 +162,13 @@ there's full traceability from requirement to defect.
   propose API/logic bug reproduction steps
 - **Requirement cross-referencing**: Identifies violated requirements and acceptance
   criteria from requirements.md and addendums; proposes root cause
-- **Defect vs story-update classification**: Distinguishes between code not matching spec
-  (defect) and spec needing to change (story update). Story updates note which epic/story
-  should be updated for consistency
-- **Smart severity inference**: Proposes Critical/High/Medium/Low based on affected user
-  flow, requirement priority, and visual vs functional impact. User confirms or overrides
+- **Three-way classification**: Distinguishes between code not matching spec (defect),
+  spec needing to change (story-update), and missing functionality (feature). Story
+  updates note which epic/story should be updated. Features note which epic/section the
+  new functionality should be added under, with a note that requirements should be updated
+- **Smart severity/priority inference**: Defects and story-updates use severity
+  (Critical/High/Medium/Low). Features use priority (Must-have/Should-have/Nice-to-have).
+  User confirms or overrides
 - **Independent reproduction verification**: Attempts to reproduce the bug before filing.
   If unable to reproduce, informs user and asks how to proceed
 - **Multi-bug sessions**: After completing one report, asks if there are more defects.
@@ -178,7 +184,7 @@ there's full traceability from requirement to defect.
 - **Epic/milestone matching**: Matches defects to existing epics/milestones from
   requirements-organizer. Creates new ones if no match
 - **Distinct issue types**: True defects get bug/defect type. Story updates get
-  story/task type with appropriate labels
+  story/task type. Features get story/feature type. Each has distinct labels
 - **Archive after submission**: Submitted files move to `defects/.archived/`. Cleanup is
   manual
 - **Fail-safe on no integration**: If no system of record is available, organizer fails
@@ -186,9 +192,9 @@ there's full traceability from requirement to defect.
 
 ## Data Model (Conceptual)
 
-- A **Defect Report** has one classification (defect or story-update), one severity,
-  one or more reproduction steps, zero or one requirement reference, and zero or one
-  root cause hypothesis
+- A **Defect Report** has one classification (defect, story-update, or feature), one
+  severity (defects/story-updates) or one priority (features), one or more reproduction
+  steps, zero or one requirement reference, and zero or one root cause hypothesis
 - A **Defect Report** references zero or one violated Requirement from requirements.md
 - A **Defect Report** may reference one or more Addendum items
 - A **Defect Report** maps to exactly one Issue in the system of record after submission
@@ -299,6 +305,9 @@ there's full traceability from requirement to defect.
 - **Story update**: A case where the documented requirement itself is outdated or wrong,
   and the spec needs to change to reflect intended behavior. The requirement needs updating,
   not necessarily the code.
+- **Feature**: Functionality that does not exist yet — not in the requirements and no code
+  implements it. The user expected it, but it was never specified or built. Filed as a
+  feature request under the appropriate epic, with a note that requirements should be updated.
 - **System of record**: The team's authoritative issue tracking system (GitHub Issues,
   Jira, Linear, or GitLab)
 - **Neutral intermediate format**: A platform-agnostic structured markdown file that the
