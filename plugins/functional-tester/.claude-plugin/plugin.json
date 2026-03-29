@@ -1,6 +1,6 @@
 {
   "name": "functional-tester",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Playwright functional test generator with full-stack performance analysis. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse CI and axe CLI for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level). Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch. Auto-installs Playwright, Lighthouse, and axe CLI if missing.",
   "author": {
     "name": "Chris Kostakis"
