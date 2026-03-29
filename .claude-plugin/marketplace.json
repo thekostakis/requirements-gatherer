@@ -23,8 +23,8 @@
     {
       "name": "visual-design",
       "source": "./plugins/visual-design",
-      "description": "Visual design system toolkit. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via Chrome browser inspection. Update-component-index skill for regenerating the component compendium index.",
-      "version": "2.2.0",
+      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via Chrome browser inspection — now includes Category F UX and Usability Review (visual hierarchy, information architecture, navigation, cognitive load, cross-breakpoint consistency, interaction feedback, content readability at desktop and mobile). Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
+      "version": "3.0.0",
       "author": {
         "name": "Chris Kostakis"
       },
@@ -36,8 +36,8 @@
     {
       "name": "functional-tester",
       "source": "./plugins/functional-tester",
-      "description": "Playwright functional test generator and runner for pages and visual flows. Writes end-to-end tests, runs them in a TDD-style fix loop, and audits pages with Lighthouse CI and axe CLI for accessibility, performance, and SEO. Auto-installs Playwright, Lighthouse, and axe CLI if missing. Includes autonomous agent for subagent dispatch.",
-      "version": "1.3.0",
+      "description": "Playwright functional test generator with full-stack performance analysis. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse CI and axe CLI for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level). Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch. Auto-installs Playwright, Lighthouse, and axe CLI if missing.",
+      "version": "1.4.0",
       "author": {
         "name": "Chris Kostakis"
       },

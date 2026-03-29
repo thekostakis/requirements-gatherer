@@ -8,13 +8,14 @@ description: >
   system", "visual review", "run design tests", "implement epic", "implement milestone",
   "implement feature", "perform a design review of [requirements]".
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
-version: 2.0.0
+version: 3.0.0
 ---
 
 # Design Reviewer
 
-Senior creative director quality gate. Verify that implemented components match the project's
-design system, look visually appealing, and meet accessibility standards using live browser
+Senior creative director and UI/UX usability expert quality gate. Verify that implemented
+components match the project's design system, look visually appealing, deliver excellent
+usability on both desktop and mobile, and meet accessibility standards using live browser
 inspection via Chrome MCP tools.
 
 ## Tool Dependency Check (MANDATORY -- RUN FIRST)
@@ -250,6 +251,48 @@ npm install -D axe-core
 6. Flag touch targets below 44x44px at mobile viewports as **BLOCKING**.
 7. Flag unreadable content (overlapping text, truncation without ellipsis) as **BLOCKING**.
 
+#### Category F: UX and Usability Review
+
+This category is the creative director and UX expert layer. It goes beyond tokens and
+checklists to evaluate the actual user experience. Run at both desktop (1280px) and
+mobile (375px) viewports.
+
+1. **Visual hierarchy assessment.** Screenshot the page at each viewport. Evaluate whether
+   the most important content and actions are visually dominant. Check that the visual
+   hierarchy guides the user's eye correctly — heading sizes, contrast, whitespace, and
+   color weight should draw attention to primary content first. Flag unclear or competing
+   hierarchy as **BLOCKING**.
+
+2. **Information architecture at breakpoints.** At mobile, evaluate whether the content
+   reflow makes sense — is important information still accessible without excessive
+   scrolling? Are secondary elements appropriately collapsed or hidden? At desktop, is the
+   layout using the available space effectively or is it stretched and sparse? Flag poor
+   information reflow at mobile as **BLOCKING**.
+
+3. **Navigation and task flow.** Evaluate whether primary actions are easily discoverable.
+   On mobile, check that navigation is thumb-friendly and critical CTAs are above the fold.
+   On desktop, verify navigation structure is intuitive and follows established patterns.
+   Flag buried or hidden primary actions as **BLOCKING**.
+
+4. **Cognitive load.** Assess whether any single screen presents too much information, too
+   many choices, or unclear next steps. Look for: walls of text without hierarchy, too many
+   equally-weighted buttons, unclear form flows, missing progress indicators in multi-step
+   processes. Flag overwhelming screens as **BLOCKING**.
+
+5. **Consistency between breakpoints.** Ensure the visual language — colors, spacing rhythm,
+   typography scale, icon style — remains consistent from desktop to mobile even though
+   layout changes. Flag jarring visual inconsistencies across breakpoints as **BLOCKING**.
+
+6. **Interaction feedback.** Check that interactive elements provide clear feedback: hover
+   states on desktop, press states on mobile, loading states for async actions, error states
+   for forms. Use `mcp__claude-in-chrome__computer` to trigger interactions and screenshot
+   the feedback. Flag silent interactions (click produces no visible change) as **BLOCKING**.
+
+7. **Content readability.** At each viewport, check font sizes against minimum readability
+   standards (16px body minimum on mobile, adequate line length of 45-75 characters). Check
+   contrast not just for WCAG compliance but for comfortable extended reading. Flag
+   uncomfortable reading experiences at any viewport as **BLOCKING**.
+
 ### Step 4: Categorize and Report
 
 Present findings using this report format:
@@ -272,6 +315,31 @@ Present findings using this report format:
 
 ### Passed Checks
 - [List of checks that passed, for confidence]
+
+### UX and Usability Review
+
+#### Desktop (1280px)
+- Visual hierarchy: [assessment]
+- Navigation/task flow: [assessment]
+- Cognitive load: [assessment]
+- Content readability: [assessment]
+
+#### Mobile (375px)
+- Visual hierarchy: [assessment]
+- Information reflow: [assessment]
+- Navigation/task flow: [assessment]
+- Cognitive load: [assessment]
+- Touch target usability: [assessment]
+- Content readability: [assessment]
+
+#### Cross-Breakpoint Consistency
+- [assessment]
+
+#### UX Issues
+1. **[Severity]:** [Description]
+   - Viewport: desktop / mobile / both
+   - Impact: [what user experience is affected]
+   - Suggestion: [specific improvement with code-level or directive-level detail]
 ~~~
 
 **Blocking issues** (must fix before passing):
@@ -288,6 +356,13 @@ Present findings using this report format:
 - Animation contradicts motion tokens
 - Missing `prefers-reduced-motion` support on any animated element
 - Fluid scale value outside defined min/max range
+- Unclear visual hierarchy at any viewport
+- Poor information reflow at mobile
+- Primary actions not discoverable
+- Overwhelming cognitive load on any screen
+- Inconsistent visual language across breakpoints
+- Interactive elements with no feedback
+- Uncomfortable reading experience at any viewport
 
 **Low issues** (reported, do not block):
 - Subjective visual suggestions
@@ -299,14 +374,26 @@ Present findings using this report format:
 - Custom component animation not documented in compendium
 - Undocumented animation (works but not in spec)
 - Fluid scales defined but component uses fixed pixel values
+- Minor visual hierarchy suggestions
+- Opportunities for better mobile space utilization
+- Navigation improvements not affecting core task completion
+- Content organization suggestions
 
-### Step 5: Fix Loop
+### Step 5: Report with Fix Suggestions
 
-1. Fix blocking issues directly using Write, Edit, or Bash.
-2. Reload the page in the browser via `mcp__claude-in-chrome__navigate`.
-3. Re-inspect ONLY the previously failing categories -- do not re-run passing checks.
-4. **Maximum 3 fix cycles.** If blocking issues remain after 3 cycles, escalate to the
-   user with full context: what was tried, what changed, why it still fails.
+Do NOT apply any fixes. Produce the categorized report from Step 4 with fix suggestions
+for every BLOCKING and LOW issue:
+
+- **Code-level suggestions** (for straightforward fixes): include exact file path, line
+  number, and the specific change to make. Example: "Change `color: #666` to
+  `color: var(--text-primary)` at `src/components/Card.tsx:42`"
+- **Directive-level suggestions** (for complex UX/design changes): describe what to change,
+  where, why, and what design principles apply. Example: "The mobile navigation buries the
+  primary CTA below three levels of menu. Consider promoting it to a persistent bottom bar
+  or floating action button, following the thumb-zone accessibility pattern."
+
+The caller will read this report, apply the recommended fixes, and optionally re-dispatch
+this skill for a follow-up review.
 
 ---
 
@@ -342,10 +429,10 @@ For each visual requirement extracted in Step 1:
    `mcp__claude-in-chrome__navigate`.
 2. Run the full 5-category inspection (same as Mode A Step 3: Visual Appearance,
    CSS/Token Compliance, Accessibility, Motion Verification, Responsive Behavior).
-3. If blocking issues are found: fix them directly using Write/Edit on source files,
-   reload the page, and re-inspect only the failing categories.
-4. **Maximum 3 fix cycles per component.** If issues persist, mark the requirement as
-   ESCALATED and move on.
+3. If blocking issues are found: report them with specific fix suggestions (code-level
+   or directive-level). Do NOT apply fixes directly.
+4. Report all findings for each requirement. The caller will apply fixes and optionally
+   re-dispatch for follow-up review.
 5. If no visual implementation is found for a requirement, mark it as MISSING.
 
 ### Step 5: Summary Report
@@ -378,8 +465,10 @@ After all requirements have been reviewed, present:
 
 1. **NEVER skip tool checks.** Both checks must pass before any work begins.
 2. **NEVER silently degrade.** Chrome tools missing or axe CDN blocked = STOP, present options, wait for user decision.
-3. **NEVER loop more than 3 times per component.** Escalate to the user after 3 fix cycles.
-4. **NEVER pass a component with blocking issues.**
-5. **ALWAYS run the axe accessibility scan.** Accessibility is not optional.
-6. **ALWAYS offer rollback** if partial work was done before a tool was found missing.
-7. **ALWAYS restore browser viewport to 1280px** after responsive testing is complete.
+3. **NEVER pass a component with blocking issues.** Report all blocking issues with fix suggestions.
+4. **ALWAYS run the axe accessibility scan.** Accessibility is not optional.
+5. **ALWAYS offer rollback** if partial work was done before a tool was found missing.
+6. **ALWAYS restore browser viewport to 1280px** after responsive testing is complete.
+7. **ALWAYS evaluate UX at both desktop (1280px) and mobile (375px) viewports.**
+8. **Do NOT apply fixes.** This skill produces reports with fix suggestions. The caller applies fixes.
+9. **ALWAYS classify fix suggestions** as "safe fix" (code-level, no UX impact) or "design/UX change needed" (directive-level, requires design decisions).
