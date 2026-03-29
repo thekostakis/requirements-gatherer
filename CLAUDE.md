@@ -16,9 +16,17 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 
 Four plugins:
 - **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
-- **visual-design** (v2.2.0) — design system establishment, component spec delivery, design quality gate agent
-- **functional-tester** (v1.3.0) — Playwright test generation, TDD fix loop, Lighthouse/axe audits, agent
+- **visual-design** (v3.1.0) — design system, component specs, design-reviewer agent with UX review
+- **functional-tester** (v1.5.0) — Playwright tests, TDD fix loop, Lighthouse/axe/performance audits, agent
 - **defect-gatherer** (v1.1.0) — structured defect intake interview + issue tracker submission
+
+## Agent Architecture (opus + haiku)
+
+Both agents (`visual-design:design-reviewer` and `functional-tester:functional-tester`) use a two-tier dispatch pattern:
+- **Opus parent** handles judgment-heavy work: UX/usability review (design-reviewer), full-stack performance analysis (functional-tester), and final report synthesis
+- **Haiku sub-agent** handles mechanical work: structured CSS inspection (design-reviewer), Playwright TDD test loop (functional-tester)
+- Agents are **report-only** for audit/analysis steps — they produce categorized fix suggestions but do not apply changes (only the functional-tester's TDD sub-agent applies code fixes during the test loop)
+- Agents are **proxies to skills**: they Glob + Read the corresponding SKILL.md at runtime, keeping the skill as the single source of truth
 
 ## Plugin Authoring Conventions
 
@@ -32,11 +40,12 @@ Four plugins:
 6. **Hard Rules** / **Important Boundaries** section at the end — immutable constraints
 
 ### Agent .md Structure (autonomous, dispatched as subagent)
-1. YAML frontmatter: `name`, `description` (start with "Use when...", triggering conditions only), `tools` (array of tool names), `model` (sonnet/opus/haiku/inherit)
+1. YAML frontmatter: `name`, `description` (start with "Use when...", triggering conditions only), `tools` (array including MCP tool names), `model` (opus for parent agents)
 2. **Agents are proxies to skills, not copies.** The agent reads and follows the corresponding SKILL.md at runtime via Glob + Read. This keeps the skill as the single source of truth and prevents drift.
-3. The agent body defines only: how to find the skill, how to adapt STOP gates for autonomous operation, and error recovery contracts
-4. STOP gates become autonomous decisions: missing dependencies → return error report immediately; user confirmation gates → make reasonable judgment and continue
+3. The agent body defines: how to find the skill, which steps to dispatch to a haiku sub-agent vs run itself, how to adapt STOP gates for autonomous operation, and error recovery contracts
+4. STOP gates become autonomous decisions: missing dependencies -> return error report immediately; user confirmation gates -> proceed with reasonable judgment and document the decision
 5. Agent type registers as `<plugin-name>:<agent-name>` (e.g., `visual-design:design-reviewer`)
+6. Fix suggestions are categorized as "safe fix" (code-level) or "design/UX change needed" (directive-level)
 
 ### Key Patterns
 - **Never silently fall back** when tools are missing — present options, fixes, workarounds, retry
@@ -52,7 +61,7 @@ When updating a plugin, bump the version in two places:
 1. `plugins/<name>/.claude-plugin/plugin.json`
 2. `.claude-plugin/marketplace.json` (the entry for that plugin)
 
-Both must match or updates won't propagate to users.
+Both must match or updates won't propagate to users. Also keep `keywords` and `description` synced between the two files.
 
 ## Installation (for testing)
 

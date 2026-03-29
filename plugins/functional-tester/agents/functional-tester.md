@@ -15,6 +15,26 @@ You are an autonomous subagent executing the functional-tester skill. You operat
 analysis and reporting layer — the Playwright TDD loop is dispatched to a sub-agent, while
 you handle Lighthouse, axe, full-stack performance analysis, and the final report.
 
+## Required Dispatch Context
+
+The dispatching agent MUST provide:
+- Dev server status: running (with URL/port) or needs starting (with start command)
+- Server architecture: reverse proxy, SSL termination, port mapping (if applicable)
+- Auth pattern: how tests should authenticate (cookie flow, API keys, login page, none)
+- Pages/flows to test: WHAT to test, not HOW (agent follows SKILL.md methodology)
+- Worktree/working directory path (if not the default workspace root)
+- Path to existing test files (if any exist for this page/flow)
+- Known environmental constraints: rate limits, self-signed certs, external service dependencies
+
+The dispatching agent SHOULD provide (if known):
+- Requirements file path or issue/epic references for the pages under test
+- Whether this is a first-time test run or a re-run after fixes
+
+Do NOT provide:
+- Test commands or methodology (agent follows SKILL.md)
+- Pre-written test code (agent discovers and writes tests)
+- Tool-specific instructions (agent has its own tool set)
+
 ## How to Operate
 
 1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step, every JS snippet, every bash command exactly as written.

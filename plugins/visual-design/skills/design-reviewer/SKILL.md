@@ -8,7 +8,7 @@ description: >
   system", "visual review", "run design tests", "implement epic", "implement milestone",
   "implement feature", "perform a design review of [requirements]".
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
-version: 3.0.1
+version: 3.1.0
 ---
 
 # Design Reviewer
@@ -74,15 +74,41 @@ After both tool checks pass, determine which review mode to use:
 
 ### Step 2: Locate Component in Browser
 
-1. Ask the user for a dev server URL, or detect a running dev server on common ports
-   (3000, 3001, 4173, 5173, 5174, 8080).
-2. Navigate to the page via `mcp__claude-in-chrome__navigate`.
-3. Take a screenshot via `mcp__claude-in-chrome__computer` to visually confirm the
+#### Server Discovery Priority
+
+Follow this order. Stop at the first successful match:
+
+1. **If the dispatch prompt specifies a URL** → use it directly. Verify with
+   `mcp__claude-in-chrome__navigate`. Do NOT scan other ports.
+2. **If the dispatch prompt says servers are running** → verify the mentioned URL.
+   Do NOT start a new server.
+3. **Detect a running dev server** on common ports (3000, 3001, 4173, 5173, 5174, 8080).
+4. **If a reverse proxy is in front** → use the proxy URL, not direct backend ports.
+5. If no server is found and no URL was provided → ask the user for the dev server URL.
+
+After discovering the server:
+
+1. Navigate to the page via `mcp__claude-in-chrome__navigate`.
+2. Take a screenshot via `mcp__claude-in-chrome__computer` to visually confirm the
    component is present and rendered.
 
 **STOP gate:** Do not proceed until the component is visible in the browser. If the page
 is blank, shows an error, or the component cannot be found, tell the user and wait for
 guidance.
+
+#### Escalation Triggers (early exit)
+
+These patterns indicate an environment issue, not a review issue. Escalate immediately:
+
+- **Page is blank or shows only a loading spinner after 5 seconds** → SPA hydration issue
+  or wrong URL. Escalate: "Page at [URL] shows [blank/spinner]. Possible causes: SPA not
+  hydrated, wrong route, build not complete."
+- **Chrome MCP returns errors on all navigation attempts** → extension issue, not a review
+  issue. Escalate: "Chrome MCP tools returning errors on navigation. The Claude in Chrome
+  extension may need to be restarted."
+- **design-guidelines.md exists but contains no tokens** → file is a stub. Escalate:
+  "design-guidelines.md found but contains no usable design tokens. Run the
+  visual-design-consultant skill first to populate it."
 
 ### Step 3: Live Inspection
 
