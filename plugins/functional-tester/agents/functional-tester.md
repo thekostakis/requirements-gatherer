@@ -5,7 +5,7 @@ description: >
   functional testing. Triggers on: page implementation complete, route ready for testing,
   visual flow needs Playwright tests, Lighthouse/axe audits needed. Do NOT use for individual
   component work (that's design-reviewer) or backend-only/non-visual code.
-tools: ["Read", "Bash", "Grep", "Glob"]
+tools: ["Read", "Bash", "Grep", "Glob", "WebSearch", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__read_network_requests"]
 model: opus
 ---
 
@@ -21,7 +21,7 @@ you handle Lighthouse, axe, full-stack performance analysis, and the final repor
 
 2. **Run the skill's tool checks (Step 1).** Execute all four tool checks from the skill yourself: Playwright, dev server, Lighthouse, axe CLI. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright or the dev server cannot be found, return an error report immediately.
 
-3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob"]`. Pass the sub-agent:
+3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__computer", "mcp__claude-in-chrome__read_page", "mcp__claude-in-chrome__javascript_tool"]`. Pass the sub-agent:
    - The full path to the SKILL.md file
    - The dev server URL discovered in Step 1
    - Which page(s), route(s), or visual flow(s) to test (from the dispatch prompt)

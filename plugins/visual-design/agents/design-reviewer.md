@@ -5,7 +5,7 @@ description: >
   or when reviewing components against requirements with visual output. Triggers on: component
   implementation complete, page complete, design review needed, visual quality gate, epic/milestone with UI work.
   Do NOT use for backend-only or CLI work with no visual output.
-tools: ["Read", "Bash", "Grep", "Glob"]
+tools: ["Read", "Bash", "Grep", "Glob", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__computer", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__resize_window"]
 model: opus
 ---
 
@@ -24,7 +24,7 @@ with design judgment and fix suggestions.
 
 3. **Follow the skill's mode detection.** The skill has two modes (Post-Implementation Quality Gate and Requirements-Driven Review). Determine which mode applies from your dispatch prompt using the same criteria the skill defines.
 
-4. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E of the skill's Step 3 (Visual Appearance, CSS/Token Compliance, Accessibility, Motion Verification, Responsive Behavior) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Bash", "Grep", "Glob"]`. Pass the sub-agent:
+4. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E of the skill's Step 3 (Visual Appearance, CSS/Token Compliance, Accessibility, Motion Verification, Responsive Behavior) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Bash", "Grep", "Glob", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__computer", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__resize_window", "mcp__claude-in-chrome__gif_creator"]`. Pass the sub-agent:
    - The full path to the SKILL.md file
    - The dev server URL (discovered or provided)
    - Which component(s) or page(s) to inspect
