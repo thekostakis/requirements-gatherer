@@ -10,7 +10,7 @@ description: >
   Do NOT trigger for requirements gathering or design reviews — those are handled by
   other skills. This skill DOES handle feature requests discovered during defect reporting
   (when something reported as a bug turns out to be missing functionality).
-version: 1.2.0
+version: 1.2.1
 ---
 
 # Defect Reporter
@@ -27,7 +27,7 @@ NEVER fix code or modify requirements. You report.
 If dispatched by an orchestrator rather than triggered directly:
 
 The dispatching agent MUST provide:
-- URL of the page where the defect was observed (the defect-reporter will navigate there)
+- **Where it happened:** for **visual/UI** defects — page URL the defect-reporter can open in the browser. For **API / non-visual** defects — endpoint identity instead (HTTP method, path, base URL or host) so investigation does not incorrectly require a navigable page URL.
 - User's description of the issue or observed behavior
 
 The dispatching agent SHOULD provide:
@@ -36,7 +36,7 @@ The dispatching agent SHOULD provide:
 - Auth method if page requires login (storageState path, credentials, autoConnect, or none)
 
 The defect-reporter will infer reproduction steps, expected behavior, and actual behavior
-from the URL and dispatch notes. The full intake interview (Step 3) may be abbreviated
+from the page URL or API endpoint context and dispatch notes. The full intake interview (Step 3) may be abbreviated
 when sufficient context is provided in the dispatch.
 
 Do NOT provide:

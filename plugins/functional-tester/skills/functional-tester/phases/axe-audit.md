@@ -78,9 +78,10 @@ impact (critical > serious > moderate > minor). Do NOT apply any fixes.
 - Missing heading hierarchy → fix heading levels
 
 **Categorize each suggestion as:**
-- **Safe fix** — no impact on functionality, usability, or UI. Caller should apply.
+- **Safe fix** — no impact on functionality, usability, or UI (e.g., alt text, labels, roles, non-conflicting contrast). Caller may apply without product approval.
 - **Accessibility — design change needed** — would require visual design changes (e.g.,
   color contrast that conflicts with brand colors). Include alternative approaches.
+- **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** — use when the fix would change interaction flow, focus order that alters task sequence, visible content removal, form submission/validation behavior, or keyboard shortcuts that redefine primary actions. The orchestrator MUST get explicit user approval before implementing; never auto-apply from the report alone.
 
 **De-duplicate with Lighthouse:** If a violation overlaps with a Lighthouse finding
 already reported in Step 6c, reference the earlier suggestion rather than duplicating it.

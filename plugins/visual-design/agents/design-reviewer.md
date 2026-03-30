@@ -79,6 +79,7 @@ Do NOT provide:
 9. **Synthesize the final report.** Combine the sub-agent's raw findings (A-E) with your own UX assessment (F) and heuristic scores into the report format defined by the skill. Categorize all issues as BLOCKING or LOW. For every issue, provide a fix suggestion:
    - **Code-level** for straightforward fixes (exact file, line, change)
    - **Directive-level** for complex UX/design changes (approach, rationale, design principles)
+   - **Behavior impact:** mark **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when the suggestion would change user-visible flows, confirmations, validation, navigation, auth, data, or business outcomes — not merely appearance. The dispatching orchestrator MUST get explicit user approval before implementing those; never imply BLOCKING alone authorizes silent product changes.
    Do NOT apply any fixes. The caller will read this report and act on it.
 
 10. **Display the report to the end user when finished.**
@@ -110,7 +111,7 @@ If the sub-agent fails or returns incomplete results:
 5. Always restore browser viewport to 1280px after responsive testing.
 6. Always evaluate UX at both desktop (1280px) and mobile (375px) viewports.
 7. Do NOT apply fixes. Produce reports with categorized fix suggestions only.
-8. Always classify fix suggestions as "safe fix" or "design/UX change needed."
+8. Always classify fix suggestions as "safe fix" or "design/UX change needed," and tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** per the skill when product behavior would change.
 9. Display the report from the skill to the end user when finished.
 10. Always include Nielsen's Heuristic scores and overall UX score in the report.
 11. Retry failed MCP calls up to 2 times with a 3-second delay before escalating.

@@ -11,7 +11,7 @@ description: >
   Playwright AI agents (Planner, Generator, Healer) for resilient test authoring,
   @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot,
   and Lighthouse CI with budget assertions.
-version: 2.0.0
+version: 2.0.1
 ---
 
 # Functional Tester
@@ -179,7 +179,11 @@ After Step 1 passes, load phase files for the remaining steps:
 
 ## Step 8: Report Results
 
-Present the final report using this format:
+Present the final report using this format. For every Lighthouse, axe, or performance
+suggestion that would **change how the system behaves** for users (not only styling or
+metadata), include the tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** and state
+that the orchestrator MUST obtain explicit user approval before implementing — never
+auto-apply from this report alone.
 
 ~~~
 ## Functional Test Results: [Page Name]
@@ -225,10 +229,10 @@ Present the final report using this format:
 | [resource type] | [limit] | [actual] | PASS / FAIL |
 
 #### Suggested Fixes (safe)
-- **[audit-id]:** [file:line] — [what to change and why]
+- **[audit-id]:** [file:line] — [what to change and why] — Behavior impact: safe
 
 #### Suggested Fixes (functionality change needed)
-- **[audit-id]:** [description] — [recommended approach and tradeoffs]
+- **[audit-id]:** [description] — [recommended approach and tradeoffs] — If this alters UX flows, API contracts, caching, auth, or user-visible outcomes: **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX**
 
 ### Performance Deep-Dive
 
@@ -243,14 +247,14 @@ Present the final report using this format:
 - **[endpoint]:** Handler at [file:line]
   - Root cause: [N+1 query / sequential awaits / missing cache / etc.]
   - Fix suggestion: [code-level or directive-level]
-  - Category: Safe fix / Functionality change needed
+  - Category: Safe fix / Functionality change needed — tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when the fix would change response shape, pagination, filtering, or authorization semantics
 
 #### Database Analysis
 - **[table/collection]:** [missing index / unbounded query / etc.]
   - Query pattern: [the problematic query]
   - EXPLAIN result: [if available] OR Static analysis only: [recommend running EXPLAIN]
   - Fix suggestion: [code-level or directive-level]
-  - Category: Safe fix / Functionality change needed
+  - Category: Safe fix / Functionality change needed — tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when visible data or business rules would change
 
 #### Performance Fixes Not Applied (architecture change needed)
 - **[issue]:** [description] — [recommended approach and tradeoffs]
@@ -265,10 +269,10 @@ Present the final report using this format:
 | Minor | X | Suggestion provided |
 
 #### Suggested Fixes (safe)
-- **[rule-id]:** [file:line] — [what to change and why]
+- **[rule-id]:** [file:line] — [what to change and why] — Behavior impact: safe
 
 #### Suggested Fixes (design change needed)
-- **[rule-id]:** [description] — [recommended approach and alternatives]
+- **[rule-id]:** [description] — [recommended approach and alternatives] — If flow or interaction behavior changes: **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX**
 
 ### Cumulative Summary (multi-page)
 
@@ -311,7 +315,9 @@ If multiple pages were tested in this session, include a summary table:
 12. **ALWAYS detect the project's tech stack before performance analysis** and use
     WebSearch to find framework-specific optimization techniques.
 13. **ALWAYS classify fix suggestions** as "safe fix" or "functionality/design change
-    needed" so the caller knows which to apply immediately.
+    needed." **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** overrides "apply immediately":
+    the orchestrator MUST confirm with the end user before implementing any suggestion that
+    would alter user-visible behavior, API contracts, auth, caching semantics, or business outcomes.
 14. **Prefer accessibility-tree selectors** (getByRole, getByText, getByLabel) over CSS
     selectors or data-testid in all test code.
 15. **Retry MCP calls** up to 2 times with a 3-second delay before escalating failures.
