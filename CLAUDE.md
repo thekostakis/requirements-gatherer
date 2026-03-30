@@ -16,17 +16,28 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 
 Four plugins:
 - **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
-- **visual-design** (v3.1.0) — design system, component specs, design-reviewer agent with UX review
-- **functional-tester** (v1.5.0) — Playwright tests, TDD fix loop, Lighthouse/axe/performance audits, agent
-- **defect-gatherer** (v1.1.0) — structured defect intake interview + issue tracker submission
+- **visual-design** (v4.0.0) — design system, component specs, design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy
+- **functional-tester** (v2.0.0) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance
+- **defect-gatherer** (v1.2.0) — structured defect intake interview + dispatch contract + issue tracker submission
 
 ## Agent Architecture (opus + haiku)
 
 Both agents (`visual-design:design-reviewer` and `functional-tester:functional-tester`) use a two-tier dispatch pattern:
-- **Opus parent** handles judgment-heavy work: UX/usability review (design-reviewer), full-stack performance analysis (functional-tester), and final report synthesis
-- **Haiku sub-agent** handles mechanical work: structured CSS inspection (design-reviewer), Playwright TDD test loop (functional-tester)
+- **Opus parent** handles judgment-heavy work: UX/usability review with Nielsen's heuristics (design-reviewer), full-stack performance analysis (functional-tester), and final report synthesis
+- **Haiku sub-agent** handles mechanical work: structured CSS inspection (design-reviewer), Playwright TDD test loop with AI agents (functional-tester)
 - Agents are **report-only** for audit/analysis steps — they produce categorized fix suggestions but do not apply changes (only the functional-tester's TDD sub-agent applies code fixes during the test loop)
-- Agents are **proxies to skills**: they Glob + Read the corresponding SKILL.md at runtime, keeping the skill as the single source of truth
+- Agents are **proxies to skills**: they Glob + Read the corresponding SKILL.md and phase files at runtime, keeping the skill as the single source of truth
+- All browser interaction uses **chrome-devtools-mcp** (fail-fast, no fallback)
+- Skills are **phase-split** for token efficiency: main SKILL.md is a slim orchestrator, heavy content lives in `phases/` subdirectories loaded on demand
+- Extracted JS/bash snippets live in `scripts/` directories
+
+## Dispatch Contracts
+
+Agents expose `Required Dispatch Context` sections in their .md files. The orchestrator MUST provide the listed context (server URL, auth method, pages to test/review, etc.) when dispatching an agent. The `defect-reporter` skill also has a dispatch contract for when it is called as a sub-agent.
+
+Key auth methods across all agents: `storageState` path, credentials (username/password), `autoConnect` (live chrome-devtools-mcp session), or `none`.
+
+Requirements traceability: dispatchers should provide requirements summaries or issue/epic references (content, not file paths that may be stale), supporting Jira, GitHub, and Linear sources.
 
 ## Plugin Authoring Conventions
 
@@ -35,17 +46,19 @@ Both agents (`visual-design:design-reviewer` and `functional-tester:functional-t
    - The `description` field serves double duty: it documents the skill's purpose AND lists trigger phrases that tell Claude Code when to activate the skill. Always include both.
 2. Mode detection early (check for existing artifacts + user input to branch into modes)
 3. Step-by-step numbered workflows with explicit **STOP gates** blocking progression until user confirms
-4. Tool dependency checks at the top of skills that need external tools (Chrome, GitHub CLI, etc.) — check availability, report what's missing, offer alternatives, never silently skip
-5. Output format templates showing exact markdown structure the skill produces
-6. **Hard Rules** / **Important Boundaries** section at the end — immutable constraints
+4. Tool dependency checks at the top of skills that need external tools (chrome-devtools-mcp, GitHub CLI, etc.) — check availability, report what's missing, offer alternatives, never silently skip. chrome-devtools-mcp is fail-fast (no fallback).
+5. Phase-split architecture: main SKILL.md is a slim orchestrator (~100-150 lines), heavy content in `skills/<name>/phases/` loaded on demand. Scripts in `plugins/<name>/scripts/`.
+6. Output format templates showing exact markdown structure the skill produces
+7. **Hard Rules** / **Important Boundaries** section at the end — immutable constraints
 
 ### Agent .md Structure (autonomous, dispatched as subagent)
-1. YAML frontmatter: `name`, `description` (start with "Use when...", triggering conditions only), `tools` (array including MCP tool names), `model` (opus for parent agents)
-2. **Agents are proxies to skills, not copies.** The agent reads and follows the corresponding SKILL.md at runtime via Glob + Read. This keeps the skill as the single source of truth and prevents drift.
-3. The agent body defines: how to find the skill, which steps to dispatch to a haiku sub-agent vs run itself, how to adapt STOP gates for autonomous operation, and error recovery contracts
+1. YAML frontmatter: `name`, `description` (start with "Use when...", triggering conditions only), `tools` (array including `mcp__chrome-devtools-mcp__*` tool names), `model` (opus for parent agents)
+2. **Agents are proxies to skills, not copies.** The agent reads and follows the corresponding SKILL.md and phase files at runtime via Glob + Read. This keeps the skill as the single source of truth and prevents drift.
+3. The agent body defines: how to find the skill, which phases to dispatch to a haiku sub-agent vs run itself, how to adapt STOP gates for autonomous operation, error recovery contracts, and a Required Dispatch Context section
 4. STOP gates become autonomous decisions: missing dependencies -> return error report immediately; user confirmation gates -> proceed with reasonable judgment and document the decision
 5. Agent type registers as `<plugin-name>:<agent-name>` (e.g., `visual-design:design-reviewer`)
 6. Fix suggestions are categorized as "safe fix" (code-level) or "design/UX change needed" (directive-level)
+7. MCP reliability: retry failed calls up to 2 times with 3-second delay; bash commands use timeouts (30s default)
 
 ### Key Patterns
 - **Never silently fall back** when tools are missing — present options, fixes, workarounds, retry

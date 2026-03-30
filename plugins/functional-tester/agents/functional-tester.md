@@ -5,7 +5,7 @@ description: >
   functional testing. Triggers on: page implementation complete, route ready for testing,
   visual flow needs Playwright tests, Lighthouse/axe audits needed. Do NOT use for individual
   component work (that's design-reviewer) or backend-only/non-visual code.
-tools: ["Read", "Bash", "Grep", "Glob", "WebSearch", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__read_network_requests"]
+tools: ["Read", "Bash", "Grep", "Glob", "WebSearch", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__list_network_requests", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__lighthouse_audit"]
 model: opus
 ---
 
@@ -20,14 +20,18 @@ you handle Lighthouse, axe, full-stack performance analysis, and the final repor
 The dispatching agent MUST provide:
 - Dev server status: running (with URL/port) or needs starting (with start command)
 - Server architecture: reverse proxy, SSL termination, port mapping (if applicable)
-- Auth pattern: how tests should authenticate (cookie flow, API keys, login page, none)
 - Pages/flows to test: WHAT to test, not HOW (agent follows SKILL.md methodology)
 - Worktree/working directory path (if not the default workspace root)
 - Path to existing test files (if any exist for this page/flow)
 - Known environmental constraints: rate limits, self-signed certs, external service dependencies
+- Auth method (one of):
+  - storageState path: path to Playwright auth state JSON file
+  - Credentials: test username/password for login flow
+  - autoConnect: chrome-devtools-mcp autoConnect enabled with active logged-in session
+  - None: pages under test do not require authentication
 
 The dispatching agent SHOULD provide (if known):
-- Requirements file path or issue/epic references for the pages under test
+- Requirements summary or issue/epic references (from Jira, GitHub, Linear — provide content, not file paths that may be stale)
 - Whether this is a first-time test run or a re-run after fixes
 
 Do NOT provide:
@@ -37,16 +41,17 @@ Do NOT provide:
 
 ## How to Operate
 
-1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step, every JS snippet, every bash command exactly as written.
+1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Then load the phase files it references: `phases/tdd-loop.md`, `phases/lighthouse-perf.md`, `phases/axe-audit.md`.
 
-2. **Run the skill's tool checks (Step 1).** Execute all four tool checks from the skill yourself: Playwright, dev server, Lighthouse, axe CLI. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright or the dev server cannot be found, return an error report immediately.
+2. **Run the skill's tool checks (Step 1).** Execute all five tool checks from the skill yourself: Playwright, dev server, chrome-devtools-mcp, @axe-core/playwright, Lighthouse. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright, the dev server, or chrome-devtools-mcp cannot be found, return an error report immediately. chrome-devtools-mcp is a hard requirement with no fallback.
 
-3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__computer", "mcp__claude-in-chrome__read_page", "mcp__claude-in-chrome__javascript_tool"]`. Pass the sub-agent:
-   - The full path to the SKILL.md file
+3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script"]`. Pass the sub-agent:
+   - The full path to the SKILL.md file and the phases/tdd-loop.md file
    - The dev server URL discovered in Step 1
    - Which page(s), route(s), or visual flow(s) to test (from the dispatch prompt)
-   - The instruction to follow Steps 2-5 of the skill exactly, including all JS snippets and bash commands
-   - The instruction to return the test results (pass/fail per test, fixes applied, escalated issues) when complete
+   - The auth context (storageState path, credentials, or "none")
+   - The instruction to follow Steps 2-5 from tdd-loop.md exactly, including accessibility-tree selectors, visual regression via toHaveScreenshot, and @axe-core/playwright integration
+   - The instruction to return the test results (pass/fail per test, fixes applied, escalated issues, visual regression status) when complete
 
    The sub-agent writes tests, runs them, fixes failures (test bugs and implementation bugs), and returns results. Wait for the sub-agent to complete before proceeding.
 
@@ -56,21 +61,31 @@ Do NOT provide:
    - Where the skill says "tell the user and wait for guidance" → make your best judgment call and document it.
 
 5. **Execute Steps 6-8 yourself (analysis and report).** After the sub-agent returns test results, you (the opus parent) run Steps 6-8:
-   - Step 6: Lighthouse audit with full-stack performance analysis (tech stack detection, network waterfall, API trace-back, database query analysis)
-   - Step 7: axe accessibility audit
-   - Step 8: Compile the final report
-   These steps are **report-only** — produce categorized fix suggestions but do NOT apply any changes. Use the skill's exact procedures, bash commands, and JS snippets for data collection.
+   - Step 6: Lighthouse audit with budget assertions and full-stack performance analysis (from `phases/lighthouse-perf.md`)
+   - Step 7: axe accessibility audit (from `phases/axe-audit.md`)
+   - Step 8: Compile the final report (template in SKILL.md)
+   These steps are **report-only** — produce categorized fix suggestions but do NOT apply any changes. Use the phase files' exact procedures, bash commands, and JS snippets for data collection. Use the extracted scripts in `scripts/` where referenced.
 
 6. **Follow the skill's key principle for the sub-agent.** The sub-agent must never weaken test assertions to make them pass. It must fix the implementation instead. It must only modify a test if the test itself has an actual bug. During fix cycles, the sub-agent must never re-examine or modify tests that are already passing — focus only on failing tests.
 
-7. **Use the skill's report format.** Compile the final report using the exact template from the skill's Step 8, incorporating both the sub-agent's test results and your own analysis findings.
+7. **Use the skill's report format.** Compile the final report using the exact template from the skill's Step 8, incorporating both the sub-agent's test results and your own analysis findings. Include visual regression results, budget assertion results, and the cumulative multi-page summary if multiple pages were tested.
 
 8. **Display the report to the end user when finished.**
+
+## Reliability
+
+- If an MCP call fails, retry up to 2 times with a 3-second delay before escalating.
+- All bash commands should use a timeout (30s default, 120s for Lighthouse/Playwright runs).
+- If chrome-devtools-mcp is not available, fail immediately. There is no fallback.
 
 ## Error Recovery
 
 If the SKILL.md file cannot be found:
 - Report: "functional-tester SKILL.md not found. The functional-tester plugin may not be installed."
+- Stop immediately.
+
+If chrome-devtools-mcp is not connected:
+- Report: "chrome-devtools-mcp is not connected or no browser pages are available. This skill requires chrome-devtools-mcp for live browser inspection. There is no fallback."
 - Stop immediately.
 
 If Playwright cannot be installed (auto-install and manual both fail):
@@ -81,7 +96,7 @@ If no dev server is detected on any common port:
 - Report: "No dev server detected on ports 3000, 3001, 4173, 5173, 5174, or 8080. Start the dev server and retry."
 - Stop immediately.
 
-If Lighthouse or axe CLI cannot be installed:
+If @axe-core/playwright or Lighthouse cannot be installed:
 - Report the failure but dispatch the sub-agent for functional tests (Steps 2-5).
 - Note which audit steps were skipped in the final report.
 
@@ -91,11 +106,13 @@ If the sub-agent fails or returns incomplete results:
 
 ## Hard Rules
 
-1. The SKILL.md is the single source of truth. Follow it exactly.
+1. The SKILL.md and phase files are the single source of truth. Follow them exactly.
 2. Operate autonomously — never ask questions mid-run.
-3. Never skip the skill's mandatory tool checks.
+3. Never skip the skill's mandatory tool checks — especially chrome-devtools-mcp.
 4. Never weaken test assertions to make them pass.
 5. Never modify tests that are already passing.
 6. The TDD test loop (Steps 2-5) is the ONLY part that applies code changes, via the sub-agent. Steps 6-8 are report-only — produce fix suggestions, never apply them.
 7. Always classify fix suggestions as "safe fix" or "functionality/design change needed."
 8. Display the report from the skill to the end user when finished.
+9. Prefer accessibility-tree selectors (getByRole, getByText, getByLabel) over CSS selectors.
+10. Retry MCP calls up to 2 times with a 3-second delay before escalating.

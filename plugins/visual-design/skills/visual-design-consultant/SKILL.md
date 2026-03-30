@@ -33,10 +33,10 @@ You produce two outputs:
 Before proceeding, check what tools you have available:
 
 **For site extraction mode:**
-- Check for Chrome browser tools (mcp__claude-in-chrome__*). If unavailable, site extraction
+- Check for chrome-devtools-mcp tools (mcp__chrome-devtools-mcp__*) via `mcp__chrome-devtools-mcp__list_pages`. If unavailable, site extraction
   is blocked. Tell the user: "I can't extract from websites right now — Chrome browser tools
-  aren't available. I can interview you about your design preferences instead, or you can
-  configure the Claude-in-Chrome extension and retry."
+  aren't available. chrome-devtools-mcp must be installed and running. I can interview you about your design preferences instead, or you can
+  install chrome-devtools-mcp (`npx chrome-devtools-mcp@latest`) and retry."
 - Present options: (a) Switch to interview-only mode, (b) Retry after setup
 - Do NOT silently fall back to interview mode.
 
@@ -74,7 +74,7 @@ For each URL the user provided:
    needed. Do NOT use Chrome browser tools for this step. Collect all URLs from the sitemap.
 2. Open the homepage in a Chrome tab. Run the `link-crawler.js` script (ships with this
    plugin — use Glob to find `**/link-crawler.js`, read it once) via
-   `mcp__claude-in-chrome__javascript_tool` to discover internal links.
+   `mcp__chrome-devtools-mcp__evaluate_script` to discover internal links.
 3. If the sitemap has distinct sections (e.g., `/blog/`, `/docs/`, `/integrations/`), also
    run `link-crawler.js` on one page from each section to find sub-navigation links.
 4. Combine sitemap URLs + crawled URLs, deduplicate by normalized pathname.
@@ -95,9 +95,9 @@ the expensive full extraction.
 1. Load `page-fingerprint.js` once (ships with this plugin — use Glob to find
    `**/page-fingerprint.js`, read it once).
 2. Process pages in parallel batches of 5:
-   a. Open 5 tabs simultaneously using `mcp__claude-in-chrome__tabs_create_mcp` (5 parallel calls).
-   b. Navigate each tab to a different URL (5 parallel `mcp__claude-in-chrome__navigate` calls).
-   c. Run `page-fingerprint.js` on all 5 tabs (5 parallel `mcp__claude-in-chrome__javascript_tool` calls).
+   a. Open 5 tabs simultaneously using `mcp__chrome-devtools-mcp__list_pages` to identify available pages.
+   b. Navigate each tab to a different URL (5 parallel `mcp__chrome-devtools-mcp__navigate_page` calls).
+   c. Run `page-fingerprint.js` on all 5 tabs (5 parallel `mcp__chrome-devtools-mcp__evaluate_script` calls).
    d. Collect the fingerprint results.
    e. Reuse tabs by navigating to the next batch of URLs, or close and reopen as needed.
 3. Repeat until all URLs are fingerprinted (50 URLs / 5 per batch = 10 rounds).
@@ -122,14 +122,14 @@ Load the extraction script `extract-design-tokens.js` once (use Glob to find
 
 Process representative pages in parallel batches of 3-5 tabs:
 
-1. **Navigate** to the page using `mcp__claude-in-chrome__navigate`.
-2. **Extract styles via JavaScript** using `mcp__claude-in-chrome__javascript_tool`.
+1. **Navigate** to the page using `mcp__chrome-devtools-mcp__navigate_page`.
+2. **Extract styles via JavaScript** using `mcp__chrome-devtools-mcp__evaluate_script`.
    To pass discovered component selectors from the fingerprint, prepend
    `const discoveredSelectors = [".pricing-toggle", ".faq-accordion", ...];` (built from
    the fingerprint's `components[].selector` values for this page) before the extraction
    script contents. This makes the extraction script capture styles for ALL discovered
    components, not just the 32 hardcoded selectors.
-3. **Capture a screenshot** using `mcp__claude-in-chrome__computer` with action "screenshot".
+3. **Capture a screenshot** using `mcp__chrome-devtools-mcp__take_screenshot`.
    Save to `.design-extraction/screenshots/`. These screenshots are **working artifacts**
    for visual design interpretation.
 4. **Visual component inventory**: After extraction + screenshot for each page, review the
@@ -142,7 +142,7 @@ Process representative pages in parallel batches of 3-5 tabs:
 5. Merge DOM-discovered and visually-discovered component inventories into a unified list
    per page.
 
-**Important:** Do NOT use `mcp__claude-in-chrome__read_page` — the JS extraction script
+**Important:** Do NOT use `mcp__chrome-devtools-mcp__take_snapshot` — the JS extraction script
 already captures everything from the DOM. Adding read_page would duplicate data and waste
 tokens.
 
@@ -157,9 +157,9 @@ content-heavy page):
 2. Regardless of what the site uses, test at these viewport widths: 375px (mobile), 768px
    (tablet), 1024px (desktop), 1440px (wide desktop).
 3. For each viewport width:
-   a. Call `mcp__claude-in-chrome__resize_window` with `width` set to the value,
-      `height` of 900, and the current `tabId`.
-   b. Re-run the extraction script via `mcp__claude-in-chrome__javascript_tool`. This
+   a. Call `mcp__chrome-devtools-mcp__resize_page` with `width` set to the value,
+      `height` of 900.
+   b. Re-run the extraction script via `mcp__chrome-devtools-mcp__evaluate_script`. This
       captures computed styles, layout patterns, and animated elements at this viewport.
    c. Take a screenshot at this viewport size (same working artifacts approach as Step 3).
 4. After all viewport passes, compare the extraction data across viewports:
@@ -740,6 +740,48 @@ Each file in `design/components/[component-name].md`:
 
 [Any responsive-specific notes: touch target enlargement, swipe gestures on mobile, etc.]
 ```
+
+## Review Checklist Generation
+
+After producing design-guidelines.md and the component compendium, generate a structured
+review checklist for the design-reviewer skill:
+
+Write to `design/review-checklist.md`:
+
+~~~
+# Design Review Checklist
+
+Generated by visual-design-consultant. Used by the design-reviewer skill.
+
+## Token Compliance Checks
+- [ ] Primary color: var(--color-primary) = [value]
+- [ ] Secondary color: var(--color-secondary) = [value]
+- [ ] Body font: var(--font-body) = [value]
+- [ ] Heading font: var(--font-heading) = [value]
+- [ ] Base spacing: var(--space-base) = [value]
+- [ ] Border radius: var(--radius-base) = [value]
+[... populate from actual tokens in design-guidelines.md]
+
+## Component Checks
+For each component in design/components/:
+- [ ] [Component name]: matches spec [file path]
+[... populate from actual component specs]
+
+## Motion Checks
+- [ ] Default transition duration: [value]
+- [ ] Default easing: [value]
+- [ ] prefers-reduced-motion support: required
+[... populate from motion tokens]
+
+## Responsive Checks
+- [ ] Breakpoints defined: [list]
+- [ ] Mobile-first approach: [yes/no per guidelines]
+[... populate from responsive tokens]
+~~~
+
+This checklist is consumed by the design-reviewer skill (when it detects
+`design/review-checklist.md`). It provides structured, project-specific criteria
+instead of generic checks.
 
 ## Important Boundaries
 

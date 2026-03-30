@@ -10,7 +10,7 @@ description: >
   Do NOT trigger for requirements gathering or design reviews — those are handled by
   other skills. This skill DOES handle feature requests discovered during defect reporting
   (when something reported as a bug turns out to be missing functionality).
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Defect Reporter
@@ -22,6 +22,29 @@ NEVER fix code or modify requirements. You report.
 
 ---
 
+## Dispatch Context (when called as sub-agent)
+
+If dispatched by an orchestrator rather than triggered directly:
+
+The dispatching agent MUST provide:
+- URL of the page where the defect was observed (the defect-reporter will navigate there)
+- User's description of the issue or observed behavior
+
+The dispatching agent SHOULD provide:
+- Expected behavior (if known)
+- Environment details (browser, OS, relevant config)
+- Auth method if page requires login (storageState path, credentials, autoConnect, or none)
+
+The defect-reporter will infer reproduction steps, expected behavior, and actual behavior
+from the URL and dispatch notes. The full intake interview (Step 3) may be abbreviated
+when sufficient context is provided in the dispatch.
+
+Do NOT provide:
+- Root cause analysis (defect-reporter investigates independently)
+- Classification (defect-reporter determines defect vs story-update vs feature)
+
+---
+
 ## Step 1: Tool Dependency Check (MANDATORY -- RUN FIRST)
 
 Before doing ANY work, check which tools are available. These checks determine your
@@ -29,10 +52,10 @@ investigation capabilities but neither one blocks the skill.
 
 ### Check 1: Chrome Browser Tools
 
-Call `mcp__claude-in-chrome__tabs_context_mcp` to verify the Chrome MCP connection is active.
+Call `mcp__chrome-devtools-mcp__list_pages` to verify the chrome-devtools-mcp connection is active.
 
-If the call fails or returns an error: note that visual inspection via Chrome browser tools
-will NOT be available for this session. Continue — visual inspection is optional. If the
+If the call fails or returns an error: note that visual inspection via chrome-devtools-mcp
+tools will NOT be available for this session. Continue — visual inspection is optional. If the
 bug turns out to be visual, you will fall back to user-described evidence (see Step 4
 fallback path).
 
@@ -99,13 +122,13 @@ Use this path when the bug is classified as VISUAL in Step 2.
 
 ### If Chrome Tools ARE Available
 
-1. **Navigate to the page** via `mcp__claude-in-chrome__navigate` using the dev server URL
+1. **Navigate to the page** via `mcp__chrome-devtools-mcp__navigate_page` using the dev server URL
    from the environment information collected in Step 3.
 
-2. **Take screenshots** via `mcp__claude-in-chrome__computer` to capture the current state
+2. **Take screenshots** via `mcp__chrome-devtools-mcp__take_screenshot` to capture the current state
    of the affected area.
 
-3. **Inspect computed CSS** via `mcp__claude-in-chrome__javascript_tool`:
+3. **Inspect computed CSS** via `mcp__chrome-devtools-mcp__evaluate_script`:
 
 ~~~javascript
 (() => {
@@ -122,20 +145,20 @@ Use this path when the bug is classified as VISUAL in Step 2.
 })()
 ~~~
 
-4. **Read console errors** via `mcp__claude-in-chrome__read_console_messages` to capture
+4. **Read console errors** via `mcp__chrome-devtools-mcp__list_console_messages` to capture
    any JavaScript errors or warnings related to the bug.
 
-5. **Check network requests** via `mcp__claude-in-chrome__read_network_requests` to identify
+5. **Check network requests** via `mcp__chrome-devtools-mcp__list_network_requests` to identify
    failed API calls, missing assets, or CORS errors.
 
-6. **Inspect DOM structure** via `mcp__claude-in-chrome__read_page` to understand the
+6. **Inspect DOM structure** via `mcp__chrome-devtools-mcp__take_snapshot` to understand the
    element hierarchy and identify missing or malformed elements.
 
 Use findings from all six inspection steps to build reproduction steps and evidence.
 
 ### If Chrome Tools ARE NOT Available
 
-Tell the user: "Chrome browser tools are not available, so I cannot inspect the page
+Tell the user: "chrome-devtools-mcp tools are not available, so I cannot inspect the page
 directly. I will build the report from your description and any evidence you can provide."
 
 Then:
@@ -480,7 +503,7 @@ All defect files are in the `defects/` directory.
    for confirmation.
 6. **NEVER auto-assign severity or priority.** Always present your proposal with reasoning
    and let the user confirm.
-7. **NEVER silently degrade.** If Chrome tools are unavailable for a visual bug, inform
+7. **NEVER silently degrade.** If chrome-devtools-mcp tools are unavailable for a visual bug, inform
    the user explicitly and explain the limitation before proceeding.
 8. **Ask 1-2 questions at a time.** Never dump a list of questions.
 9. **Use research tools silently.** When reading code or requirements, do not announce

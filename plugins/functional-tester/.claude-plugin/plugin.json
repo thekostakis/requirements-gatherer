@@ -1,11 +1,11 @@
 {
   "name": "functional-tester",
-  "version": "1.5.0",
-  "description": "Playwright functional test generator with full-stack performance analysis. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse CI and axe CLI for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level). Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch. Auto-installs Playwright, Lighthouse, and axe CLI if missing.",
+  "version": "2.0.0",
+  "description": "Playwright functional test generator with full-stack performance analysis. Uses chrome-devtools-mcp for live browser inspection, Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot, and Lighthouse CI with budget assertions. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse and @axe-core/playwright for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level). Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch.",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "axe", "wcag", "accessibility", "performance", "seo", "testing", "agent"]
+  "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "axe", "axe-core-playwright", "wcag", "accessibility", "performance", "seo", "visual-regression", "chrome-devtools-mcp", "testing", "agent"]
 }
