@@ -6,8 +6,6 @@ A Claude Code plugin marketplace for product design, project planning, and testi
 
 ### requirements-gatherer
 
-#### requirements-gatherer
-
 A senior product consultant that interviews you to understand what you want to build, then produces a structured `requirements.md` file. It defines WHAT and WHY, never HOW — no architecture, no tech recommendations, no implementation details.
 
 Supports two modes:
@@ -75,37 +73,43 @@ Loads the relevant component spec from the design compendium into context when i
 
 #### design-reviewer
 
-Senior creative director quality gate. Verifies implemented components match the design system through live Chrome browser inspection — visual comparison, CSS token compliance, axe accessibility audits, motion verification, and responsive behavior checks.
+Senior creative director quality gate. Verifies implemented UI against the design system through **chrome-devtools-mcp** (live browser inspection): visual appearance, CSS/token compliance, accessibility (axe), motion, responsive behavior, and **Nielsen’s 10 usability heuristics** with a **0–100 UX score**. Supports **diff mode** (compare to a prior `design-review-*.md` report) and can consume **`design/review-checklist.md`** from the consultant.
 
 **Trigger phrases:** "review component", "design review", "check against design system", "visual review", "run design tests", "implement epic", "implement milestone", "implement feature", "perform a design review of [requirements]"
 
-**Two modes:**
-- **Post-implementation gate** — reviews a single component/page after implementation (like superpowers:code-reviewer for visual work)
-- **Requirements-driven review** — reads tickets/epics/requirements, inspects each visual requirement, fixes blocking issues, re-inspects
+**Modes (high level):**
+- **Post-implementation gate** — standard review after a component or page is built
+- **Follow-up / diff** — re-review after fixes, compared to the last saved report
+- **Requirements-driven** — trace tickets/epics/requirements to what is implemented in the UI
 
-**What it does:**
-- Inspects live pages via Chrome browser tools — no Storybook or Playwright dependency
-- Injects axe-core at runtime for accessibility audits
-- Reads computed CSS styles and compares against design tokens
-- Tests responsive behavior at multiple viewports
-- Categorizes issues as blocking (must fix) or low (informational)
-- Fixes blocking issues directly and re-inspects up to 3 cycles, then escalates
+**What it does (report-only):**
+- Produces a structured report with **blocking** vs **low** issues and fix suggestions — it does **not** apply code or design changes
+- Tags suggestions that would **change product behavior** (flows, confirmations, validation, navigation, etc.) so the **human approves before implementation** — see `docs/REVIEWER-FUNCTIONAL-CHANGE-PLAN.md`
+- Uses an opus + haiku agent split: mechanical inspection vs UX/heuristics synthesis (see `CLAUDE.md`)
 
 ### functional-tester
 
-Generates and runs Playwright functional tests for pages and visual flows. Operates in a TDD-style loop: write tests, run them, fix failures, re-run. Includes Lighthouse CI audits for accessibility, performance, and SEO.
+Generates and runs **Playwright** functional tests for pages and visual flows. **TDD-style loop:** write tests, run, fix failures (implementation or test bugs), re-run — with Playwright AI agents, **accessibility-tree selectors**, **@axe-core/playwright**, **visual regression** (`toHaveScreenshot`), and optional **Lighthouse budget** files. After tests, runs **Lighthouse**, **axe**, and a **performance deep-dive** (network waterfall, API trace-back, DB hints) via **chrome-devtools-mcp**.
 
 **Trigger phrases:** "write functional tests", "create page tests", "playwright tests for this page", "test this page", "functional tests"
 
 **What it does:**
-- Auto-installs Playwright and Lighthouse if missing
-- Discovers testable behaviors by inspecting the live page and cross-referencing requirements
-- Presents a test plan for user confirmation before writing
-- Writes Playwright test files matching project conventions
-- Runs tests and classifies failures as test bugs vs implementation bugs
-- Fixes source code to pass tests (never weakens assertions), up to 3 cycles
-- Runs Lighthouse audits for accessibility, performance, and SEO (skips SEO behind login)
-- Best-effort fixes for critical Lighthouse issues
+- Auto-installs Playwright, Lighthouse, and @axe-core/playwright when possible
+- Discovers testable behaviors from the live page and requirements context
+- Presents a test plan for user confirmation before writing tests
+- **Steps 2–5:** writes/runs/fixes tests (never weakens assertions), limited fix cycles then escalate
+- **Steps 6–8 (report-only):** Lighthouse, axe, and performance suggestions — **no automatic application** of those audit fixes; behavior-changing items need **explicit user approval** (same escalation idea as design-reviewer, `docs/REVIEWER-FUNCTIONAL-CHANGE-PLAN.md`)
+- Skips misleading SEO Lighthouse category on pages behind authentication
+
+### defect-gatherer
+
+Structured **defect intake** and **issue-tracker submission**. The reporter skill interviews (or uses a dispatch contract), classifies work as **defect**, **story-update**, or **feature request**, and writes report files. The organizer pushes to **GitHub, Jira, Linear, or GitLab**.
+
+**Reporter trigger phrases:** "report a bug", "report a defect", "I found a bug", "file a defect", "something is broken"
+
+**Organizer trigger phrases:** "submit defects", "push bugs to GitHub", "create tickets from defects"
+
+**Dispatch note:** For orchestrators calling the reporter, supply a **page URL** for visual bugs or **API endpoint identity** (method, path, base URL) for non-visual issues.
 
 ## Workflow
 
@@ -124,17 +128,43 @@ Later, when scope changes:
 ## Visual Design Workflow
 
 ```
-1. Run visual-design-consultant     →  design-guidelines.md + design/components/ + CLAUDE.md updated
+1. Run visual-design-consultant     →  design-guidelines.md + design/components/
 2. Implement components              →  component-context skill loads specs automatically
-3. Run design-reviewer               →  live Chrome inspection + fix loop
+3. Run design-reviewer               →  live inspection report; you (or your agent) apply fixes; optional re-run for diff
 ```
 
 ## Functional Testing Workflow
 
 ```
-1. Implement pages/routes            →  functional-tester triggers after visual work
-2. Run functional-tester             →  Playwright tests + TDD fix loop + Lighthouse audit
+1. Implement pages/routes            →  functional-tester fits after meaningful UI flows exist
+2. Run functional-tester             →  Playwright TDD loop + report-only Lighthouse / axe / performance sections
 ```
+
+## Defect Workflow
+
+```
+1. Run defect-reporter               →  structured defect file under defects/ (or equivalent)
+2. Run defect-organizer              →  issues filed in GitHub / Jira / Linear / GitLab
+```
+
+## End-to-end flow (how plugins fit together)
+
+Typical order for a new product UI — adjust to your process:
+
+```
+requirements-gatherer     →  requirements.md
+requirements-organizer    →  backlog (GitHub / Jira / …)
+visual-design-consultant  →  design-guidelines.md + design/components/
+        ↓ implement UI (component-context helps load specs)
+design-reviewer           →  design-review report → human/agent applies fixes
+        ↓
+functional-tester         →  Playwright tests + audit reports
+        ↓ ship / iterate
+defect-reporter           →  defect files
+defect-organizer          →  tracker tickets
+```
+
+Skills are also useful standalone (e.g. only functional-tester on an existing app).
 
 ## Installation
 
@@ -150,6 +180,7 @@ Later, when scope changes:
 /plugin install requirements-gatherer@functional-design-tools
 /plugin install visual-design@functional-design-tools
 /plugin install functional-tester@functional-design-tools
+/plugin install defect-gatherer@functional-design-tools
 ```
 
 **Step 3:** Reload:
@@ -159,6 +190,10 @@ Later, when scope changes:
 ```
 
 ## Usage
+
+Example prompts below are natural-language triggers; exact wording can vary as long as the intent matches the skill descriptions above.
+
+### Requirements
 
 Start a new requirements interview:
 
@@ -210,7 +245,51 @@ Update an existing design system with new components or changes:
 > add a pricing table component to the design system
 ```
 
-The consultant produces `design-guidelines.md` and component specs in `design/components/`, and adds skill triggers to your CLAUDE.md. After that, the component-context skill loads specs when you implement components, and the design-reviewer skill runs quality gate tests.
+The consultant produces `design-guidelines.md` and component specs in `design/components/`. After that, **component-context** loads specs when you implement components, and **design-reviewer** runs the visual quality gate (report-only).
+
+**Component context** (while implementing):
+
+```
+> load the design spec for the primary button
+> what does the design say about the data table component?
+```
+
+**Design review** (after a page or component is built — dev server running, chrome-devtools-mcp connected):
+
+```
+> design review the dashboard page
+> check the login form against the design system
+> re-review the settings page — follow-up after fixes
+> perform a design review of epic 3 against the requirements
+```
+
+### Functional testing
+
+With the app running locally and chrome-devtools-mcp available:
+
+```
+> write functional tests for the checkout page
+> test this page with Playwright — cover the empty cart and error states
+> run functional tests on the onboarding flow
+```
+
+### Defects
+
+**Reporter** (intake + investigation; produces files under `defects/`):
+
+```
+> I found a bug: the save button does nothing on the profile page
+> report a defect — the API returns 500 on POST /api/invoices
+> something is broken: the modal won't close on mobile
+```
+
+**Organizer** (after defect files exist):
+
+```
+> submit defects to GitHub
+> push the bug reports in defects/ to Jira
+> create tickets from the defect files
+```
 
 ## License
 
