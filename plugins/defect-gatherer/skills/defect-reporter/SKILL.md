@@ -1,16 +1,32 @@
 ---
 name: defect-reporter
 description: >
-  Use this skill when the user wants to report a bug or defect in their application.
-  Trigger phrases: "report a bug", "report a defect", "I found a bug", "something is
-  broken", "this isn't working right", "file a defect", "log a bug", "defect report".
-  Also trigger when the user describes unexpected behavior in a running application or
-  API — for example, "the login page shows the wrong error", "this endpoint returns 500",
-  "the button doesn't do anything", "the layout is broken on mobile".
-  Do NOT trigger for requirements gathering or design reviews — those are handled by
-  other skills. This skill DOES handle feature requests discovered during defect reporting
-  (when something reported as a bug turns out to be missing functionality).
-version: 1.2.1
+  Use this skill when the user wants to report or file something against the *existing*
+  product or spec: a bug, an issue, a problem, a regression, a change to requirements or
+  stories, or a concrete feature/enhancement request for the tracker. The skill classifies
+  as defect, story-update, or feature and produces defect report files.
+  Defect- and issue-like triggers: "report a bug", "report a defect", "report an issue",
+  "file a bug", "file an issue", "file a defect", "log a bug", "log an issue", "defect report",
+  "bug report", "I found a bug", "I have an issue", "there's an issue with", "something's wrong",
+  "something is broken", "this isn't working", "doesn't work", "not working", "it's broken",
+  "we have a problem", "problem with", "ran into a problem", "unexpected behavior",
+  "incorrect behavior", "wrong result", "regression", "used to work", "failing", "failure",
+  "error when", "throws an error", "crash", "glitch", "the layout is broken", "broken on mobile",
+  "this endpoint returns 500", "the button doesn't do anything", "wrong error message".
+  Change-, story-, and spec-update triggers: "change request", "scope change", "requirement
+  changed", "update the story", "story needs updating", "story is wrong", "story is outdated",
+  "spec is wrong", "doesn't match the spec", "not what we specified", "acceptance criteria
+  are wrong", "AC is wrong", "ticket needs updating", "amend the story", "revise the ticket",
+  "requirement is outdated", "misspecified", "we need to change the requirement".
+  Feature- and enhancement-like triggers (concrete add-on to existing product, not
+  greenfield scoping): "feature request", "request a feature", "enhancement request",
+  "small feature", "we should add", "missing capability", "not implemented but should be",
+  "not a bug but we need".
+  Do NOT trigger for greenfield requirements discovery ("gather requirements", "what should
+  we build", full MVP scoping, requirements interview) or for design-only reviews — use
+  requirements-gatherer or design-reviewer. DO trigger when the user is filing a concrete
+  gap, change, or request against existing behavior or documented stories.
+version: 1.2.2
 ---
 
 # Defect Reporter

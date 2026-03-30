@@ -16,13 +16,15 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 
 Four plugins:
 - **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
-- **visual-design** (v4.0.1) — design system, component specs, design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy, functional-change escalation tags on review output
+- **visual-design** (v4.0.6) — design system, component specs, **visual-design-consultant** (interview/extraction; **codebase reverse-engineering** loads `phases/codebase-reverse-engineering.md` — chrome-devtools-mcp for routes, written spec `docs/design-system/codebase-reverse-spec-*.md`, one section per guidelines/motion/component, per-file delete confirmation), **component-context agent** (exact or ~90%+ fuzzy → **entire** matched spec file + motion; top-3 full files + synthesis + motion when ambiguous; gap + motion), design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy, functional-change escalation tags on review output
 - **functional-tester** (v2.0.1) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance, functional-change escalation on report-only audits
-- **defect-gatherer** (v1.2.1) — structured defect intake interview + dispatch contract (URL or API endpoint) + issue tracker submission
+- **defect-gatherer** (v1.2.2) — defect/issue intake (bugs, problems, regressions), story/spec change requests, concrete feature requests; dispatch (URL or API endpoint); organizer submits to trackers
 
 ## Agent Architecture (opus + haiku)
 
-Both agents (`visual-design:design-reviewer` and `functional-tester:functional-tester`) use a two-tier dispatch pattern:
+**`visual-design:component-context`** (opus) — **Exact** or **high-confidence** fuzzy: paste the **complete** matched `design/components/*.md` file + **motion**. **Top-3** full files + synthesis + **motion** when ambiguous. **Gap** + motion when no match. Never dump whole compendium.
+
+**`visual-design:design-reviewer`** and **`functional-tester:functional-tester`** use a two-tier dispatch pattern:
 - **Opus parent** handles judgment-heavy work: UX/usability review with Nielsen's heuristics (design-reviewer), full-stack performance analysis (functional-tester), and final report synthesis
 - **Haiku sub-agent** handles mechanical work: structured CSS inspection (design-reviewer), Playwright TDD test loop with AI agents (functional-tester)
 - Agents are **report-only** for audit/analysis steps — they produce categorized fix suggestions but do not apply changes (only the functional-tester's TDD sub-agent applies code fixes during the test loop)

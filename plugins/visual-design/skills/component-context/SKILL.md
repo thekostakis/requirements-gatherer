@@ -1,141 +1,240 @@
 ---
 name: component-context
 description: >
-  Use this skill when implementing frontend components to load the relevant design spec.
+  Use for design-system guidance during UI implementation: which component to use, specs for
+  named components, fuzzy matches when no exact spec exists, or how to approach a component
+  that has no spec yet — without loading the entire compendium into the caller's context.
   Trigger phrases: "load component spec", "component design spec", "what does the design say
-  about [component]", "show me the spec for [component]", "design spec for [component]".
-  Also use when: creating or editing files in component directories (components/, ui/, widgets/),
-  writing component function/class definitions, or any time you need the design system's
-  component specification to guide implementation.
-version: 1.3.0
+  about [component]", "design spec for [component]", "which component should I use",
+  "recommend a component", "pick a component from the design system", "map this UI to components",
+  "no spec for", "missing component spec", "there's no design for", "how should I design",
+  "how to style", "design guidance for", "component gap", "compose from existing components",
+  "what should I use for [pattern]", "implement this against the design system",
+  "offload component context", "get a compact spec briefing". Also when creating or editing
+  files under components/, ui/, or widgets/ and you need token-aware implementation hints.
+  Prefer dispatching the visual-design:component-context agent. **Exact match or ~90%+
+  high-confidence fuzzy:** return the **complete** markdown body of the matched component
+  spec (entire file), plus motion guidance — never a summary instead of the full spec.
+  **Top-3** when fuzzy is ambiguous; **gap** when nothing fits. Never dump the whole compendium.
+  Do NOT use for establishing a new design system from scratch (visual-design-consultant)
+  or for post-build visual QA (design-reviewer).
+version: 1.4.4
 ---
 
 # Component Context
 
-Load the relevant component spec from the design compendium so implementation follows
-the design system.
+Route every request through a **decision**: obvious single match → **minimal** return; fuzzy
+and **not** highly confident → **auto top 3** full specs + synthesis + motion; no match →
+**gap** inference (includes motion from guidelines). Cap remains **3** full spec files max.
+
+Heavy scoring and wide reads stay in the **`visual-design:component-context`** agent session.
+
+---
 
 ## Step 1: Check for Design Compendium
 
-Look for `design/components/` directory. If it doesn't exist:
+Look for `design/components/`. If it doesn't exist:
 
 **STOP.** Tell the user: "No component compendium found at `design/components/`. Run the
 visual-design-consultant skill first to establish a design system."
 
-## Step 2: Identify the Component
+If `design-guidelines.md` is missing, note it; still return what you can for motion (from
+specs alone if present).
 
-From the context of what's being implemented, determine which component(s) are relevant.
-Look at the current task, file being edited, or user's request.
+---
 
-## Step 3: Dispatch Lookup
+## Step 2: Invocation
 
-Launch a Haiku subagent to perform the spec lookup. Use the Agent tool with:
-- `model: "haiku"`
-- `description: "Look up [component-name] design spec"`
-- `prompt:` the full prompt below, with `{COMPONENT_NAME}` replaced by the actual component name
+**Recommended:** Dispatch **`visual-design:component-context`** with UI intent, component name,
+or file path.
 
-**Subagent prompt:**
+**Interactive:** Same rules in the main thread.
 
-~~~
-You are a design spec lookup agent. Find and return the design spec for "{COMPONENT_NAME}".
+---
 
-## Exact Match
+## Step 3: Identify the Component or Pattern
 
-1. Try reading `design/components/{COMPONENT_NAME}.md`.
-2. If not found, try these variants and check each:
-   - Hyphenated: split camelCase or PascalCase on capitals, join with hyphens, lowercase
-     (e.g., NotificationBanner -> notification-banner)
-   - Singular: remove trailing "s" (e.g., buttons -> button)
-   - Plural: add trailing "s" (e.g., button -> buttons)
-3. If any variant matches, read that file. Skip to **Load Tokens** below.
+Extract **target name** and **what they are trying to build** (drives fuzzy ranking and
+synthesis).
 
-## Fuzzy Match (no exact match found)
+---
 
-1. Try reading `design/components/index.md`. If the index exists:
-   a. Score each row against "{COMPONENT_NAME}" using these signals:
+## Step 4: Lookup (agent session)
 
-   | Signal | Weight | How it matches |
-   |--------|--------|---------------|
-   | Name substring | 3 | "{COMPONENT_NAME}" appears in the Component column or vice versa |
-   | Related components | 3 | "{COMPONENT_NAME}" appears in the Related column |
-   | Keyword overlap | 2 | "{COMPONENT_NAME}" or words from it appear in the Keywords column |
-   | Same category | 1 | The component's likely category matches the row's Category |
+### Exact match
 
-   b. Take the top 3 rows with score > 0.
-   c. Read the full spec file for each (`design/components/[name].md`).
+Try `design/components/{name}.md` with kebab-case / singular-plural / PascalCase variants.
+If a file exists → note **exact_match**.
 
-2. If no index exists, fall back: use Glob to list all `.md` files in `design/components/`,
-   read each, and score using the same signals (reading Related components and Usage & Content
-   sections from each file instead of the index).
+### Fuzzy match (no exact file)
 
-3. If any specs scored > 0, format the response as:
+1. Prefer `design/components/index.md`: score rows (substring/related **3**, keywords **2**,
+   category **1**).
+2. Internally rank **at least top 5**; read `.md` files as needed for scores and motion.
+3. No index: `Glob` `design/components/*.md`, score from Related + Usage & Content.
 
-       ## No Exact Spec: {COMPONENT_NAME}
+Let **S1** = highest score, **S2** = second-highest (use **0** if no second candidate).
 
-       No spec file found for "{COMPONENT_NAME}". Here are similar components
-       that may help as a starting point:
+### Motion sources (always consider)
 
-       ### Suggestion 1: [Name] (highest relevance)
-       **Why:** [1-2 sentences explaining which signals matched]
+- `design-guidelines.md`: motion / animation / duration / easing / `prefers-reduced-motion`
+  if documented.
+- Each component spec: **Motion**, **Animation**, **Transitions**, or equivalent sections.
 
-       [Full spec content]
+---
 
-       ### Suggestion 2: [Name] (moderate relevance)
-       **Why:** [1-2 sentences]
+## Step 5: Decision — which output mode?
 
-       [Abbreviated: Visual Properties, Data Fields, Usage & Content sections only]
+### A. Exact match
 
-       ### Suggestion 3: [Name] (lower relevance)
-       **Why:** [1-2 sentences]
+→ **Minimal mode** (§7a). **MUST** include the **entire** contents of the matched
+`design/components/<file>.md` (full component spec — no excerpts, no “key sections only”).
+Then **Motion guidance** (§6). **Do not** add long briefing, ranked lists, or pattern
+synthesis unless the user explicitly asked to compare options.
 
-       [Abbreviated: Visual Properties, Data Fields, Usage & Content sections only]
+### B. No exact match — high-confidence fuzzy (≈ “90%+” winner)
 
-       ---
-       To add a dedicated spec for {COMPONENT_NAME}, run the visual-design-consultant skill.
+Treat as **single obvious match** when **any** holds:
 
-4. If no specs score above 0, return:
-   "No spec file found for {COMPONENT_NAME}, and no similar components in the compendium.
-   Run the visual-design-consultant skill to add it."
+1. **S2 == 0** and **S1 > 0** (only one scored candidate), or  
+2. **S1 > 0** and **S2 / S1 ≤ 0.1** (runner-up is ≤10% of the top score — top is ~90%+ of the
+   combined top-two signal), or  
+3. **S1 - S2 ≥ 3** on the weighted row scale (3/2/1 weights) — clear separation.
 
-## Load Tokens
+→ **Minimal mode** for the **top-ranked** component only (§7a). **MUST** include the **entire**
+markdown body of that component’s spec file — same rule as exact match: **full spec**, not a
+summary.
 
-Read `design-guidelines.md` and extract the specific tokens referenced by the component
-spec: colors, spacing, typography, motion, breakpoints. Keep under 50 lines.
+### C. No exact match — not high-confidence
 
-## Format the Response
+→ **Top-3 mode** (§7b): include **full** markdown for the **top 1–3** components that have
+**score > 0** (if only two exist, two full specs — **do not** pad with weak third). Add
+**Design pattern synthesis** and **Motion guidance** (§6).
 
-For exact matches:
+### D. No scores > 0
 
-    ## Design Spec: [Component Name]
+→ **Gap mode** (§7c).
 
-    [Full content of the component spec file]
+---
 
-    ## Relevant Design Tokens
+## Step 6: Pattern synthesis and motion (Top-3 mode)
 
-    [Only the tokens from design-guidelines.md that this component uses]
+### Design pattern synthesis
 
-    ## Responsive Tokens (if component spec has Responsive Behavior section)
+**Required** in Top-3 mode. **Omit** in Minimal mode.
 
-    [Breakpoints or fluid scales from design-guidelines.md that the component references]
+- How each of the **included** full specs maps to what they are building; when to prefer A
+  vs B vs C.
+- **Composition:** stack/nest (from Related / Usage in specs).
+- **Shared tokens / density / a11y** across those components.
+- **Gaps:** what none of the three cover → suggest visual-design-consultant.
 
-## Context Limits
+Keep roughly **≤40 lines** unless dispatch asks for depth.
 
-- At most 3 component specs (under 200 lines each = 600 lines max)
-- Tokens section under 50 lines
-- For fuzzy suggestions: full spec for suggestion 1 only; abbreviate suggestions 2-3
-  to Visual Properties, Data Fields, and Usage & Content sections
-~~~
+### Motion guidance
 
-## Step 4: Present Result
+**Always provide motion guidance** in some form:
 
-Display the subagent's response directly in the conversation. Do not summarize or
-reformat it -- present it as-is so the spec is fully visible for reference during
-implementation.
+| Mode | Motion |
+|------|--------|
+| **Minimal** | After the full spec: **### Motion guidance** — **≤4 bullets** from that spec’s motion/animation sections + relevant lines from `design-guidelines.md`. Mention **prefers-reduced-motion** if guidelines do. |
+| **Top-3** | **### Motion guidance** — how motion should **align** across the chosen components (durations, easing, enter/exit, reduced motion). Cite tokens from guidelines + each spec’s motion sections. **≤8 bullets** or **≤25 lines**. |
+| **Gap** | **### Motion guidance** — **≤5 bullets** from `design-guidelines.md` only (or note “no motion tokens documented”). |
 
-If the subagent reports no compendium or no match, relay that message to the user.
+---
+
+## Step 7: Output shapes
+
+### 7a. Minimal mode (exact or high-confidence single match)
+
+No ranked list. No pattern synthesis.
+
+**HARD RULE:** Output the **complete** component spec — **100%** of the file from disk for
+the matched component. Do **not** truncate, abbreviate, or replace with a bullet summary.
+
+```
+## Full design spec: [Component display name]
+
+[verbatim full contents of design/components/<file>.md — entire file]
+
+### Motion guidance
+- [≤4 bullets — spec + design-guidelines.md]
+```
+
+Optional single line before the heading: `Single match: [name] ([path])` — **one line only**.
+
+### 7b. Top-3 mode (ambiguous fuzzy)
+
+**Part A — Briefing**
+
+```
+## Component context briefing
+
+### What you're building
+- [one line]
+
+### Top matches (full specs below for ranks 1–3; score > 0 only)
+1. **[Name]** — [path] — [one line fit] (S=[score optional])
+2. ...
+3. ...
+4+. [Name] — path — [one line only, no full spec]
+
+### Design pattern synthesis
+- [§6]
+
+### Motion guidance
+- [§6]
+
+### Key tokens (max 8 bullets)
+- [...]
+
+### Implementation notes (max 7 bullets)
+- [...]
+```
+
+**Part B — Full specs**
+
+For each of **up to 3** components in rank order, separated by `---`:
+
+```
+## Full design spec: [Name]
+[entire file]
+---
+```
+
+### 7c. Gap mode
+
+```
+## Component context briefing
+
+### What you're building
+- [one line]
+
+### Inferred approach (no compendium match)
+- [≤7 bullets — composition, tokens, states, a11y]
+
+### Motion guidance
+- [≤5 bullets from design-guidelines.md or note absence]
+
+### Next step
+- Run visual-design-consultant to add `design/components/...` when ready.
+```
+
+**No Part B.**
+
+### Routing-only (optional)
+
+If dispatch is only “which file?”: **Part A** with paths + one line each; **omit** full
+paste unless asked.
+
+---
 
 ## Important Boundaries
 
-- Do NOT modify design files or component specs
-- Do NOT make design decisions -- deliver what the spec says
-- Do NOT skip loading the spec to "save time" -- the spec exists to prevent implementation drift
+- Read-only on design files.
+- **Max 3** full spec files per reply.
+- **Minimal mode (exact or ~90%+ fuzzy):** **full** component spec file (entire markdown) +
+  motion — **never** substitute a shortened spec.
+- **Top-3 mode:** auto top **1–3** full specs by rank when **not** high-confidence; fourth+
+  summarized only.
+- visual-design-consultant owns net-new system creation.

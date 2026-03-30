@@ -65,11 +65,11 @@ Establishes a project's visual design system through plain-language interview or
 - Generates per-component spec files in design/components/
 - Supports addendum mode to update existing design systems
 
-#### component-context
+#### component-context (skill + **`visual-design:component-context`** agent)
 
-Loads the relevant component spec from the design compendium into context when implementing frontend components. Supports fuzzy matching — if no exact spec exists, suggests similar components ranked by relevance.
+**Off-thread** lookup with three behaviors: **(1)** exact or high-confidence (~90%) fuzzy → the **entire** matched component spec file (full markdown) + **motion guidance**, no long briefing; **(2)** ambiguous fuzzy → **auto top 3** full specs + **pattern synthesis** + **motion**; **(3)** no match → inferred guidance + motion from guidelines. Further candidates stay one-line only — never the whole compendium.
 
-**Trigger phrases:** "load component spec", "component design spec", "what does the design say about [component]", "design spec for [component]"
+**Trigger phrases:** see the skill `description` in the plugin (e.g. "load component spec", "which component should I use", "no spec for", "map this UI to components"). Prefer **dispatching the agent** when implementing so the main session stays lean.
 
 #### design-reviewer
 
@@ -105,9 +105,9 @@ Generates and runs **Playwright** functional tests for pages and visual flows. *
 
 Structured **defect intake** and **issue-tracker submission**. The reporter skill interviews (or uses a dispatch contract), classifies work as **defect**, **story-update**, or **feature request**, and writes report files. The organizer pushes to **GitHub, Jira, Linear, or GitLab**.
 
-**Reporter trigger phrases:** "report a bug", "report a defect", "I found a bug", "file a defect", "something is broken"
+**Reporter triggers (examples):** bugs and issues ("report an issue", "file a bug", "regression", "doesn't work"); problems ("problem with", "something's wrong"); spec and story changes ("change request", "update the story", "spec is wrong", "AC is wrong"); concrete feature adds ("feature request", "missing capability"). See the skill `description` in the plugin for the full phrase list. Not for greenfield requirements interviews — use **requirements-gatherer** for those.
 
-**Organizer trigger phrases:** "submit defects", "push bugs to GitHub", "create tickets from defects"
+**Organizer triggers (examples):** "submit defects", "push issues to GitHub", "sync defects to Jira", "create tickets from defects", "push story updates"
 
 **Dispatch note:** For orchestrators calling the reporter, supply a **page URL** for visual bugs or **API endpoint identity** (method, path, base URL) for non-visual issues.
 
@@ -129,7 +129,7 @@ Later, when scope changes:
 
 ```
 1. Run visual-design-consultant     →  design-guidelines.md + design/components/
-2. Implement components              →  component-context skill loads specs automatically
+2. Implement components              →  dispatch **visual-design:component-context** (minimal one spec + motion, or top-3 + synthesis + motion, or gap — see skill) (or run the skill)
 3. Run design-reviewer               →  live inspection report; you (or your agent) apply fixes; optional re-run for diff
 ```
 
@@ -247,11 +247,13 @@ Update an existing design system with new components or changes:
 
 The consultant produces `design-guidelines.md` and component specs in `design/components/`. After that, **component-context** loads specs when you implement components, and **design-reviewer** runs the visual quality gate (report-only).
 
-**Component context** (while implementing):
+**Component context** (while implementing — **obvious match** → one full spec + motion only; **ambiguous** → up to 3 full specs + patterns + motion):
 
 ```
 > load the design spec for the primary button
 > what does the design say about the data table component?
+> which design-system component should I use for a filterable list with row actions?
+> there's no spec for JobCard — infer from guidelines and closest components
 ```
 
 **Design review** (after a page or component is built — dev server running, chrome-devtools-mcp connected):
@@ -280,6 +282,9 @@ With the app running locally and chrome-devtools-mcp available:
 ```
 > I found a bug: the save button does nothing on the profile page
 > report a defect — the API returns 500 on POST /api/invoices
+> there's an issue with checkout — wrong total when a coupon is applied
+> the story for notifications is wrong; we need to update acceptance criteria
+> feature request: export the report as CSV from the dashboard
 > something is broken: the modal won't close on mobile
 ```
 
@@ -288,6 +293,7 @@ With the app running locally and chrome-devtools-mcp available:
 ```
 > submit defects to GitHub
 > push the bug reports in defects/ to Jira
+> push these issues to Linear — they're in defects/
 > create tickets from the defect files
 ```
 
