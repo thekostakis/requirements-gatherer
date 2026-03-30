@@ -23,14 +23,14 @@
     {
       "name": "visual-design",
       "source": "./plugins/visual-design",
-      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via chrome-devtools-mcp — includes Nielsen's 10 Usability Heuristics framework with UX scoring (0-100), diff mode for follow-up reviews, consultant synergy (review-checklist.md), functional/behavior-change escalation tags on fix suggestions, and Categories A-F split into phase files. Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
-      "version": "4.0.1",
+      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery; codebase reverse-engineering mode derives tokens and component specs from the repo with chrome-devtools-mcp route inspection (spec at docs/design-system/codebase-reverse-spec-*.md, section-by-section approval, per-file delete confirmation). Component-context skill plus opus component-context agent: minimal one spec + motion when exact or high-confidence fuzzy; auto top-3 specs + synthesis + motion when ambiguous; gap inference otherwise. Design-reviewer skill and agent for live visual quality gate testing via chrome-devtools-mcp — includes Nielsen's 10 Usability Heuristics framework with UX scoring (0-100), diff mode for follow-up reviews, consultant synergy (review-checklist.md), functional/behavior-change escalation tags on fix suggestions, and Categories A-F split into phase files. Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
+      "version": "4.0.6",
       "author": {
         "name": "Chris Kostakis"
       },
       "repository": "https://github.com/thekostakis/requirements-gatherer",
       "license": "MIT",
-      "keywords": ["design-system", "visual-design", "chrome-devtools-mcp", "accessibility", "axe", "design-tokens", "components", "responsive", "motion", "animations", "agent", "nielsen-heuristics", "ux-scoring", "diff-mode"],
+      "keywords": ["design-system", "visual-design", "chrome-devtools-mcp", "accessibility", "axe", "design-tokens", "components", "component-context", "responsive", "motion", "animations", "agent", "nielsen-heuristics", "ux-scoring", "diff-mode"],
       "category": "design"
     },
     {
@@ -49,14 +49,14 @@
     {
       "name": "defect-gatherer",
       "source": "./plugins/defect-gatherer",
-      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
-      "version": "1.2.1",
+      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Broad trigger coverage: bugs/issues/problems/regressions, change and story updates, and concrete feature requests against existing product (not greenfield requirements). Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+      "version": "1.2.2",
       "author": {
         "name": "Chris Kostakis"
       },
       "repository": "https://github.com/thekostakis/requirements-gatherer",
       "license": "MIT",
-      "keywords": ["defect", "bug", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "chrome-devtools-mcp", "dispatch-contract"],
+      "keywords": ["defect", "bug", "issue", "problem", "regression", "story-update", "change-request", "feature-request", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "chrome-devtools-mcp", "dispatch-contract"],
       "category": "quality"
     }
   ]

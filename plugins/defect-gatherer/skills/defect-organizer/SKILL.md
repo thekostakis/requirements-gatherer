@@ -2,13 +2,16 @@
 name: defect-organizer
 description: >
   Use this skill when the user has defect report files in the defects/ directory
-  and wants to submit them to an issue tracker. Trigger phrases: "submit defects",
-  "push defects", "create defect issues", "file the bugs", "submit bug reports",
-  "push bugs to GitHub", "push bugs to Jira", "organize defects", "create tickets
-  from defects". Also trigger when the user has defect files in the defects/ directory
-  and wants to submit them to GitHub, Jira, Linear, or GitLab. Do NOT trigger for
-  defect reporting or investigation — that is the defect-reporter skill.
-version: 1.1.0
+  and wants to submit them to an issue tracker (bugs, story-updates, and feature
+  requests are all submitted from those files). Trigger phrases: "submit defects",
+  "push defects", "submit issues", "push issues", "sync defects to GitHub", "sync to Jira",
+  "create defect issues", "create tickets from defects", "file the bugs", "file the issues",
+  "submit bug reports", "submit pending reports", "push bugs to GitHub", "push bugs to Jira",
+  "push story updates", "push change requests", "organize defects", "upload defects",
+  "import defects into Linear", "create GitLab issues from defects". Also trigger when the
+  user has defect files in defects/ and wants them on GitHub, Jira, Linear, or GitLab.
+  Do NOT trigger for defect reporting or investigation — that is the defect-reporter skill.
+version: 1.2.2
 ---
 
 # Defect Organizer

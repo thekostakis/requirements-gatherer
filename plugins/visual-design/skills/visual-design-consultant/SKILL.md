@@ -7,9 +7,12 @@ description: >
   "design interview", "update design guidelines", "add to design system".
   Also trigger when the user provides a URL and asks about its design, or when they describe
   visual preferences for a project.
+  Codebase reverse-engineering triggers: "design system from codebase", "reverse engineer
+  components from the repo", "extract tokens from this project", "derive design guidelines
+  from code", "build component specs from existing UI", "motion design from codebase".
   Do NOT trigger for requirements gathering — that is the requirements-gatherer skill.
   Do NOT trigger for code review — that is the design-reviewer skill.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Visual Design Consultant
@@ -40,6 +43,13 @@ Before proceeding, check what tools you have available:
 - Present options: (a) Switch to interview-only mode, (b) Retry after setup
 - Do NOT silently fall back to interview mode.
 
+**For codebase reverse-engineering mode:**
+
+- chrome-devtools-mcp is **required** to **visually inspect routes** in the running app.
+  Verify with `mcp__chrome-devtools-mcp__list_pages`. If unavailable, **STOP** — do not use
+  a visual companion from another plugin; follow the error path in
+  `phases/codebase-reverse-engineering.md`.
+
 **For all modes:**
 - Check for WebSearch/WebFetch for research. Not required but helpful.
 
@@ -54,15 +64,36 @@ Determine which mode to enter:
 
 1. **Check for `design-guidelines.md`** in the working directory.
 2. **Check if the user provided URLs** to example sites.
+3. **Check if the user asked for codebase reverse-engineering** — deriving tokens, motion,
+   and component specs from **existing project code** (not from external URLs alone).
 
-| design-guidelines.md exists? | URLs provided? | Mode |
-|------------------------------|----------------|------|
-| No | Yes | EXTRACTION MODE |
-| No | No | INTERVIEW MODE |
-| Yes | Yes | ADDENDUM MODE (extraction) |
-| Yes | No | ADDENDUM MODE (interview) |
+| Codebase reverse-engineering? | design-guidelines.md | URLs | Mode |
+|-------------------------------|----------------------|------|------|
+| **Yes** | * | * | **CODEBASE REVERSE-ENGINEERING** — load `phases/codebase-reverse-engineering.md` and follow it. Uses **chrome-devtools-mcp** to inspect **routes** in a running app; **does not** use the Superpowers visual companion. Written spec path: **`docs/design-system/codebase-reverse-spec-YYYY-MM-DD.md`** only (never `docs/superpowers/`). Section-by-section approval: **guidelines**, **motion**, and **each component** (new/update/delete) as its **own** section. **Deletes** require **explicit one-by-one confirmation** at execution time. |
+| No | No | Yes | EXTRACTION MODE |
+| No | No | No | INTERVIEW MODE |
+| No | Yes | Yes | ADDENDUM MODE (extraction) |
+| No | Yes | No | ADDENDUM MODE (interview) |
+
+If the user asks for **both** codebase reverse-engineering **and** URL extraction, ask **one**
+clarifying question: which to run first, or whether to merge into one spec (default:
+**codebase first**, then optional extraction addendum in a second pass).
+
+### CODEBASE REVERSE-ENGINEERING (summary)
+
+- **Explore** repo (Read/Grep/Glob) for tokens, components, motion, routes — then **inspect
+  routes** with **chrome-devtools-mcp** (`navigate_page`, `take_screenshot`, `evaluate_script`).
+- **2–3 approaches** with trade-offs; user picks direction.
+- **Present and approve each section separately:** (1) guidelines delta, (2) motion delta,
+  (3) each **new** component, (4) each **update**, (5) each **delete** — each is its **own**
+  section; **STOP** after each for approve/revise/stop.
+- **Write** the full plan to `docs/design-system/codebase-reverse-spec-YYYY-MM-DD.md` → user
+  reviews file → **then** apply creates/updates; for **each** planned **delete**, ask **yes/no**
+  **individually** before removing `design/components/*.md`.
+- Full algorithm, tooling, and STOP gates: **`phases/codebase-reverse-engineering.md`**.
 
 ---
+
 
 # EXTRACTION MODE
 
@@ -793,6 +824,19 @@ instead of generic checks.
 - **NEVER exceed 200 lines** per component compendium file.
 - When referencing extracted values, always say where they came from: "I got this from
   [site name]" so the user knows the source.
+
+**CODEBASE REVERSE-ENGINEERING mode** (when `phases/codebase-reverse-engineering.md` is loaded):
+
+- **NEVER** use a Superpowers visual companion or write specs under `docs/superpowers/` —
+  the written plan lives only at **`docs/design-system/codebase-reverse-spec-YYYY-MM-DD.md`**.
+- **Route inspection** uses **chrome-devtools-mcp** only (`navigate_page`, `take_screenshot`,
+  `evaluate_script`); do not substitute other browser MCPs.
+- **Section approval:** after **each** section — guidelines, motion, and **each** component
+  (new, update, or delete) is its **own** section; **STOP** between sections.
+- **Deletes:** plan in sections; at execution, **confirm each delete one-by-one** (yes/no per
+  file) before removing any `design/components/*.md`.
+- **NEVER** write or update `design-guidelines.md` / `design/components/` until the full
+  spec file is **user-approved** (see phase Step 8).
 
 ## Screenshot Cleanup
 
