@@ -45,7 +45,7 @@ Do NOT provide:
 
 2. **Run the skill's tool checks (Step 1).** Execute all five tool checks from the skill yourself: Playwright, dev server, chrome-devtools-mcp, @axe-core/playwright, Lighthouse. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright, the dev server, or chrome-devtools-mcp cannot be found, return an error report immediately. chrome-devtools-mcp is a hard requirement with no fallback.
 
-3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script"]`. Pass the sub-agent:
+3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
    - The full path to the SKILL.md file and the phases/tdd-loop.md file
    - The dev server URL discovered in Step 1
    - Which page(s), route(s), or visual flow(s) to test (from the dispatch prompt)
@@ -112,7 +112,7 @@ If the sub-agent fails or returns incomplete results:
 4. Never weaken test assertions to make them pass.
 5. Never modify tests that are already passing.
 6. The TDD test loop (Steps 2-5) is the ONLY part that applies code changes, via the sub-agent. Steps 6-8 are report-only — produce fix suggestions, never apply them.
-7. Always classify fix suggestions as "safe fix" or "functionality/design change needed."
+7. Always classify fix suggestions as "safe fix" or "functionality/design change needed." Any suggestion that would **change how the system behaves** for users (flows, confirmations, validation timing, navigation, auth, caching semantics, API contracts, error handling visible to users, removing/limiting data or actions) MUST be tagged **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** and the dispatching orchestrator MUST get explicit user approval before implementing — never auto-apply those from this report alone.
 8. Display the report from the skill to the end user when finished.
 9. Prefer accessibility-tree selectors (getByRole, getByText, getByLabel) over CSS selectors.
-10. Retry MCP calls up to 2 times with a 3-second delay before escalating.
+10. Retry MCP calls up to 2 times with a 3-second delay before escalating failures.

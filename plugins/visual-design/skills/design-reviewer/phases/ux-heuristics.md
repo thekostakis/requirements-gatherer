@@ -5,6 +5,15 @@ tokens and checklists to evaluate the actual user experience using Nielsen's 10 
 Heuristics as a structured framework. When running under the design-reviewer agent, the
 opus parent handles this phase directly. All browser interaction uses chrome-devtools-mcp.
 
+## Functional vs cosmetic (caller escalation)
+
+**BLOCKING** and **LOW** describe review severity — they do **not** mean an implementer may change product behavior without approval.
+
+- **Safe / cosmetic / token-level** — color, spacing, typography, non-interactive markup, alt text, ARIA that does not alter flows, motion tied to existing tokens. These may be implemented without escalating product behavior (still follow team process).
+- **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** — any recommendation that would change how the system works for users: confirmations for destructive actions, modal dismiss rules, validation strategy (inline vs submit), navigation structure, feature discoverability that requires removing/hiding content, keyboard shortcuts, form multi-step flow, auth/session UX, empty/error state copy that changes obligations, or anything that could alter business rules or data shown. Tag the issue with this label and state briefly *what behavior would change*. The orchestrator MUST present these to the end user and get explicit approval before any fix is applied — **never auto-apply** from the review report alone.
+
+Examples that are **functional** (escalate): adding a confirmation dialog, moving a primary action, changing when validation runs, consolidating screens, removing a navigation entry. Examples that are usually **safe**: fixing contrast with approved tokens, adding missing `aria-label`, correcting heading levels without hiding content.
+
 ## Reliability
 
 - **MCP retry:** If any `mcp__chrome-devtools-mcp__*` call fails, retry up to 2 times

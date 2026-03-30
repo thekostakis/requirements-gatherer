@@ -9,7 +9,7 @@ description: >
   visual preferences for a project.
   Do NOT trigger for requirements gathering — that is the requirements-gatherer skill.
   Do NOT trigger for code review — that is the design-reviewer skill.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Visual Design Consultant
@@ -94,12 +94,12 @@ the expensive full extraction.
 
 1. Load `page-fingerprint.js` once (ships with this plugin — use Glob to find
    `**/page-fingerprint.js`, read it once).
-2. Process pages in parallel batches of 5:
-   a. Open 5 tabs simultaneously using `mcp__chrome-devtools-mcp__list_pages` to identify available pages.
-   b. Navigate each tab to a different URL (5 parallel `mcp__chrome-devtools-mcp__navigate_page` calls).
-   c. Run `page-fingerprint.js` on all 5 tabs (5 parallel `mcp__chrome-devtools-mcp__evaluate_script` calls).
+2. Process pages in parallel batches of 5 when the browser session has enough tabs; otherwise fingerprint sequentially (see below).
+   a. **`list_pages` lists tabs — it does not create them.** If fewer than 5 pages are returned, either: (i) open additional Chrome tabs in the same debugging-attached browser until `list_pages` shows 5+ pages, then assign each `navigate_page` to a distinct page id, or (ii) fall back to **sequential fingerprinting**: one tab, `navigate_page` → `evaluate_script` (fingerprint) → next URL, repeat — slower but valid when only one tab exists.
+   b. When you have 5+ pages: navigate each tab to a different URL (up to 5 parallel `mcp__chrome-devtools-mcp__navigate_page` calls targeting different page ids).
+   c. Run `page-fingerprint.js` on each tab in the batch (parallel `evaluate_script` calls when multiple tabs exist).
    d. Collect the fingerprint results.
-   e. Reuse tabs by navigating to the next batch of URLs, or close and reopen as needed.
+   e. Reuse tabs by navigating to the next batch of URLs.
 3. Repeat until all URLs are fingerprinted (50 URLs / 5 per batch = 10 rounds).
 4. Group fingerprint results by `structuralHash`. Pages with identical hashes use the
    same template — they share the same landmark structure, layout shape, and interactive

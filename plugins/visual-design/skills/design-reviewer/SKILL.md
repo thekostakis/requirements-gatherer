@@ -10,7 +10,7 @@ description: >
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
   Uses chrome-devtools-mcp for live browser inspection. Includes Nielsen's 10 Usability
   Heuristics framework with UX scoring (0-100) and diff mode for follow-up reviews.
-version: 4.0.0
+version: 4.0.1
 ---
 
 # Design Reviewer
@@ -52,6 +52,11 @@ timeout 30 bash -c 'ls design-review-*.md 2>/dev/null | head -5 || echo "NO_PREV
 ~~~
 
 Record the result. If previous reports exist, they will be used when diff mode is activated.
+
+**Saving reports for diff mode:** When you complete a design review, write the report to a
+dated file in the project root (or path given in dispatch), e.g. `design-review-2026-03-29.md`
+or `design-review-[component-or-page-slug].md`, matching the `design-review-*.md` glob. The
+next follow-up review loads the most recent file from Check 3 for regression comparison.
 
 **If ANY of Check 1 or Check 2 fails and partial work was done before discovery: offer to rollback.**
 
@@ -124,12 +129,16 @@ This skill is split into phase files for maintainability. Load phases as needed:
    - Actual: [what was found]
    - Location: [file:line or element selector]
    - Fix type: safe fix | design/UX change needed
+   - Behavior impact: safe (cosmetic/token/a11y-only) | **FUNCTIONAL / BEHAVIOR CHANGE** (if implementing would alter user-facing flows, confirmations, validation, navigation, auth, data shown, or business outcomes)
+   - If FUNCTIONAL: **ESCALATE TO USER BEFORE APPLYING ANY FIX** — do not implement without explicit approval
    - Fix: [specific suggestion]
 
 ### Low Issues
 1. **[Category]:** [Description]
    - Suggestion: [what could be improved]
    - Fix type: safe fix | design/UX change needed
+   - Behavior impact: safe | **FUNCTIONAL / BEHAVIOR CHANGE** (with brief note if applicable)
+   - If FUNCTIONAL: **ESCALATE TO USER BEFORE APPLYING ANY FIX**
 
 ### Passed Checks
 - [List of checks that passed, for confidence]
@@ -167,6 +176,8 @@ This skill is split into phase files for maintainability. Load phases as needed:
    - Viewport: desktop / mobile / both
    - Impact: [what user experience is affected]
    - Fix type: safe fix | design/UX change needed
+   - Behavior impact: safe | **FUNCTIONAL / BEHAVIOR CHANGE**
+   - If FUNCTIONAL: **ESCALATE TO USER BEFORE APPLYING ANY FIX**
    - Suggestion: [specific improvement]
 
 ### Diff from Previous Review (Mode A-Diff only)
@@ -203,7 +214,7 @@ Delta: +/-XX
 - [Requirements with no visual implementation found]
 
 ### Escalated Issues
-- [Issues that could not be resolved, with full context]
+- [Issues that could not be resolved, with full context — tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** where any proposed resolution would change product behavior]
 ~~~
 
 ---
@@ -221,5 +232,6 @@ Delta: +/-XX
 9. **Do NOT apply fixes.** This skill produces reports with fix suggestions. The caller applies fixes.
 10. **ALWAYS classify fix suggestions** as "safe fix" (code-level, no UX impact) or "design/UX change needed" (directive-level, requires design decisions).
 11. **ALWAYS include Nielsen's Heuristic scores** in the report for Category F.
-12. **Retry MCP calls** up to 2 times with a 3-second delay before escalating.
-13. **Timeout all bash commands** at 30 seconds.
+12. **ALWAYS tag behavior-changing recommendations** with **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when implementation would alter how the product works for users (not merely how it looks). The caller MUST escalate those items to the end user before any fix — BLOCKING severity does not override this.
+13. **Retry MCP calls** up to 2 times with a 3-second delay before escalating.
+14. **Timeout all bash commands** at 30 seconds.

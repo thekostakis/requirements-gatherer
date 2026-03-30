@@ -23,8 +23,8 @@
     {
       "name": "visual-design",
       "source": "./plugins/visual-design",
-      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via chrome-devtools-mcp — includes Nielsen's 10 Usability Heuristics framework with UX scoring (0-100), diff mode for follow-up reviews, consultant synergy (review-checklist.md), and Categories A-F split into phase files. Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
-      "version": "4.0.0",
+      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery. Component-context skill with fuzzy matching for on-demand spec delivery. Design-reviewer skill and agent for live visual quality gate testing via chrome-devtools-mcp — includes Nielsen's 10 Usability Heuristics framework with UX scoring (0-100), diff mode for follow-up reviews, consultant synergy (review-checklist.md), functional/behavior-change escalation tags on fix suggestions, and Categories A-F split into phase files. Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch. Update-component-index skill for regenerating the component compendium index.",
+      "version": "4.0.1",
       "author": {
         "name": "Chris Kostakis"
       },
@@ -36,8 +36,8 @@
     {
       "name": "functional-tester",
       "source": "./plugins/functional-tester",
-      "description": "Playwright functional test generator with full-stack performance analysis. Uses chrome-devtools-mcp for live browser inspection, Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot, and Lighthouse CI with budget assertions. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse and @axe-core/playwright for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level). Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch.",
-      "version": "2.0.0",
+      "description": "Playwright functional test generator with full-stack performance analysis. Uses chrome-devtools-mcp for live browser inspection, Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot, and Lighthouse CI with budget assertions. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse and @axe-core/playwright for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level) and functional/behavior-change escalation before implementing product-affecting fixes. Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch.",
+      "version": "2.0.1",
       "author": {
         "name": "Chris Kostakis"
       },
@@ -49,8 +49,8 @@
     {
       "name": "defect-gatherer",
       "source": "./plugins/defect-gatherer",
-      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with URL-based defect intake. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
-      "version": "1.2.0",
+      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+      "version": "1.2.1",
       "author": {
         "name": "Chris Kostakis"
       },

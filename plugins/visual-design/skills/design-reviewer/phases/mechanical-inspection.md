@@ -256,9 +256,20 @@ For each visual requirement extracted in Step 1:
    re-dispatch for follow-up review.
 5. If no visual implementation is found for a requirement, mark it as MISSING.
 
+### Step 5: Compile Mode B summary (for final report)
+
+Assemble the structured summary the main skill's **Mode B Report** template expects:
+
+1. **Requirements Reviewed:** total count from Step 1.
+2. **Passed / Escalated / Missing:** counts from Step 4 (PASS = no blocking issues for that requirement; ESCALATED = blocking issues remain; MISSING = no UI found).
+3. **Per-requirement results:** one row per requirement — name, PASS | ESCALATED | MISSING, component, issue counts, short issue list for escalated items.
+4. **UX Score and Nielsen heuristic table:** not produced in this phase — the opus parent fills Category F (`phases/ux-heuristics.md`) and merges into the final report. Leave explicit placeholders in your handoff if you are the haiku sub-agent: "Category F pending (opus)."
+
 ---
 
 ## Issue Classification
+
+**Functional / behavior change (caller escalation):** Any fix that would change how users complete tasks — add/remove confirmations, change validation timing, alter navigation or IA, change auth or session behavior, remove or hide capabilities, or change error outcomes — MUST be labeled **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX**. The orchestrator MUST obtain explicit user approval before implementing; do not treat BLOCKING severity as permission to auto-apply product-changing fixes.
 
 **Blocking issues** (must fix before passing):
 - Design token violations (wrong colors, spacing, typography)

@@ -150,7 +150,17 @@ If no budget file exists, skip this step silently.
 If the performance score is already above 90, skip the performance deep-dive (Steps 6c-pre
 through 6c-3) entirely. Note in the report: "Performance score XX/100 — above threshold,
 no performance analysis performed." Still proceed with accessibility and SEO analysis
-regardless of performance score.
+regardless of performance score (scores already extracted from the Step 6b JSON parse).
+
+**If you take this early exit:** you do not run Step 6c-1 (which normally deletes
+`lighthouse-report.json`). Clean up the JSON artifact immediately so it is not left on disk:
+
+~~~bash
+rm -f ./lighthouse-report.json
+~~~
+
+If you ran the budget pass in 6b-budget, also run `rm -f ./lighthouse-budget-report.json`
+after recording budget results in the report.
 
 ### 6c-pre: Detect Tech Stack
 
@@ -300,9 +310,8 @@ fix suggestion using mixed detail:
 - Framework-specific optimizations → reference WebSearch findings from 6c-pre
 
 **Categorize each suggestion as:**
-- **Safe fix** — no impact on functionality, usability, or UI. Caller should apply.
-- **Performance — functionality change needed** — would impact UX. Include potential
-  solutions and tradeoffs. Do NOT apply.
+- **Safe fix** — no impact on functionality, usability, or UI. Caller may apply without product approval.
+- **Performance — functionality change needed** — would impact UX or observable behavior. Tag as **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when the change alters API payloads, pagination, caching behavior, auth/session semantics, what data users see, or which actions succeed/fail. The orchestrator MUST confirm with the end user before implementing; do not auto-apply from the report alone.
 
 **SEO suggestions (only if NOT behind login):**
 - Missing meta description, missing canonical link, non-crawlable links, bad heading hierarchy

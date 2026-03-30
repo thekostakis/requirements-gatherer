@@ -16,9 +16,9 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 
 Four plugins:
 - **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
-- **visual-design** (v4.0.0) — design system, component specs, design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy
-- **functional-tester** (v2.0.0) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance
-- **defect-gatherer** (v1.2.0) — structured defect intake interview + dispatch contract + issue tracker submission
+- **visual-design** (v4.0.1) — design system, component specs, design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy, functional-change escalation tags on review output
+- **functional-tester** (v2.0.1) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance, functional-change escalation on report-only audits
+- **defect-gatherer** (v1.2.1) — structured defect intake interview + dispatch contract (URL or API endpoint) + issue tracker submission
 
 ## Agent Architecture (opus + haiku)
 
@@ -57,7 +57,7 @@ Requirements traceability: dispatchers should provide requirements summaries or 
 3. The agent body defines: how to find the skill, which phases to dispatch to a haiku sub-agent vs run itself, how to adapt STOP gates for autonomous operation, error recovery contracts, and a Required Dispatch Context section
 4. STOP gates become autonomous decisions: missing dependencies -> return error report immediately; user confirmation gates -> proceed with reasonable judgment and document the decision
 5. Agent type registers as `<plugin-name>:<agent-name>` (e.g., `visual-design:design-reviewer`)
-6. Fix suggestions are categorized as "safe fix" (code-level) or "design/UX change needed" (directive-level)
+6. Fix suggestions are categorized as "safe fix" (code-level) or "design/UX change needed" (directive-level); behavior-changing items use **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** — orchestrator must confirm with the user before implementing
 7. MCP reliability: retry failed calls up to 2 times with 3-second delay; bash commands use timeouts (30s default)
 
 ### Key Patterns
@@ -67,6 +67,7 @@ Requirements traceability: dispatchers should provide requirements summaries or 
 - **Version must be bumped** in both `plugin.json` AND `marketplace.json` for updates to propagate
 - **Skills define WHAT/WHY, not HOW**: requirements-gatherer and defect-reporter produce documents, never fix code or suggest architecture
 - **Classification patterns**: defect-gatherer classifies reports as defect, story-update, or feature-request; this three-way split is a core convention
+- **Functional-change escalation**: design-reviewer and functional-tester (report-only steps) tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when a suggestion would alter user-visible behavior, API semantics, auth, or business outcomes — **BLOCKING** severity does not authorize silent implementation; the user must approve first
 
 ## Versioning
 
