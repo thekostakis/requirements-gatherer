@@ -1,11 +1,11 @@
 {
   "name": "defect-gatherer",
-  "version": "1.1.0",
-  "description": "Defect reporting and submission workflow. Reporter skill conducts structured interviews, auto-generates reproduction steps via Chrome inspection (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+  "version": "1.2.0",
+  "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with URL-based defect intake. Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["defect", "bug", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability"]
+  "keywords": ["defect", "bug", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "chrome-devtools-mcp", "dispatch-contract"]
 }
