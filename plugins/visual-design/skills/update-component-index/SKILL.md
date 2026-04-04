@@ -1,7 +1,7 @@
 ---
 name: update-component-index
 description: >
-  Use this skill to regenerate the component index after manually adding, editing, or removing
+  This skill should be used to regenerate the component index after manually adding, editing, or removing
   component spec files. Trigger phrases: "update component index", "rebuild component index",
   "refresh design index", "regenerate component index".
 version: 1.0.0

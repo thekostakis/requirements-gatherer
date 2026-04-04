@@ -42,6 +42,28 @@ when Top-3 mode applies.
 4. **Motion:** always populate per skill §6 (minimal / top-3 / gap caps).
 5. Autonomous unless skill STOP requires user action.
 
+## Adapt STOP Gates for Autonomous Operation
+
+The skill contains one hard STOP gate and two soft dependencies. Handle each as follows:
+
+- **Compendium missing (Step 1 STOP):** Hard stop — `design/components/` directory does not exist.
+  Do NOT infer or fabricate component guidance. Return an error report immediately:
+  "component-context: No design/components/ directory found. Run visual-design-consultant
+  to establish the design system first." Stop all processing — do not proceed to scoring or output.
+
+- **design-guidelines.md missing (noted in Step 1):** Soft dependency — continue processing.
+  Populate motion guidance from component specs only. Add a note in the Motion section:
+  "design-guidelines.md not found — motion guidance is derived from component specs only."
+  Do not stop.
+
+- **No component scores > 0 (Gap mode):** Not a STOP — fall through to Gap mode (Step 5D).
+  Return inferred bullets from request context. Do not ask the user to clarify intent; make
+  the best inference available and note it is inferred.
+
+- **Mode decision (Minimal vs Top-3):** Apply S1/S2 scoring rules from Step 5 exactly.
+  Do not ask the user to choose among tied components — that is the purpose of Top-3 mode.
+  If scores are tied and no single match reaches high-confidence threshold, Top-3 applies automatically.
+
 ## Hard Rules
 
 1. SKILL.md is authoritative.

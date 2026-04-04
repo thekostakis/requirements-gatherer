@@ -1,7 +1,7 @@
 ---
 name: functional-tester
 description: >
-  Use this skill after completing implementation of a full page, route, or visual flow
+  This skill should be used after completing implementation of a full page, route, or visual flow
   that can be tested end-to-end. Trigger phrases: "write functional tests", "create page
   tests", "playwright tests for this page", "test this page", "functional tests". Also
   fires after implementation steps complete when the work involves a testable page or
