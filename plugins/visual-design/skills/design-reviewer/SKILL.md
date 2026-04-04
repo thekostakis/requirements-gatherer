@@ -1,7 +1,7 @@
 ---
 name: design-reviewer
 description: >
-  Use this skill when a major project step involving visual/UI work has been completed and
+  This skill should be used when a major project step involving visual/UI work has been completed and
   needs to be reviewed against the design system. Examples: "I've finished implementing the
   dashboard page", "the card component is done", "implement epic 3" (when epic involves
   visual output). Also fires on: "review component", "design review", "check against design

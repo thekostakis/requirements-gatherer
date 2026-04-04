@@ -1,7 +1,7 @@
 ---
 name: component-context
 description: >
-  Use for design-system guidance during UI implementation: which component to use, specs for
+  This skill should be used for design-system guidance during UI implementation: which component to use, specs for
   named components, fuzzy matches when no exact spec exists, or how to approach a component
   that has no spec yet — without loading the entire compendium into the caller's context.
   Trigger phrases: "load component spec", "component design spec", "what does the design say
@@ -11,7 +11,7 @@ description: >
   "how to style", "design guidance for", "component gap", "compose from existing components",
   "what should I use for [pattern]", "implement this against the design system",
   "offload component context", "get a compact spec briefing". Also when creating or editing
-  files under components/, ui/, or widgets/ and you need token-aware implementation hints.
+  files under components/, ui/, or widgets/ where token-aware implementation hints are needed.
   Prefer dispatching the visual-design:component-context agent. **Exact match or ~90%+
   high-confidence fuzzy:** return the **complete** markdown body of the matched component
   spec (entire file), plus motion guidance — never a summary instead of the full spec.

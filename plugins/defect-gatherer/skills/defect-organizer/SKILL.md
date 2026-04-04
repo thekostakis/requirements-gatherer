@@ -1,7 +1,7 @@
 ---
 name: defect-organizer
 description: >
-  Use this skill when the user has defect report files in the defects/ directory
+  This skill should be used when the user has defect report files in the defects/ directory
   and wants to submit them to an issue tracker (bugs, story-updates, and feature
   requests are all submitted from those files). Trigger phrases: "submit defects",
   "push defects", "submit issues", "push issues", "sync defects to GitHub", "sync to Jira",
@@ -304,60 +304,9 @@ gh issue list --repo OWNER/REPO --state open --limit 100
 
 Confirm all issues have milestones and correct labels.
 
-### 5b. Jira Issue Creation
+### 5b/5c/5d. Jira, Linear, GitLab Issue Creation
 
-Use Jira MCP tools:
-
-1. **Create issues with native types:**
-   - True defects: Issue type = "Bug"
-   - Story updates: Issue type = "Story" or "Task"
-   - Features: Issue type = "Story"
-
-2. **Set priority field:**
-   - For defects/story-updates (severity mapping):
-     Critical = Blocker, High = Critical, Medium = Major, Low = Minor
-   - For features (priority mapping):
-     Must-have = Critical, Should-have = Major, Nice-to-have = Minor
-
-3. **Link to parent epic.**
-
-4. **Add issue link** to the requirement story (if found): "is blocked by" or "relates to".
-
-5. **Issue description** follows the same structure as GitHub but in Jira markup format.
-
-### 5c. Linear Issue Creation
-
-Use Linear CLI, MCP, or API (whichever was detected):
-
-1. **Create issues:**
-   - True defects: Add "Bug" label
-   - Story updates: Add "Improvement" label
-   - Features: Add "Feature" label
-
-2. **Set priority:**
-   - For defects/story-updates (severity mapping):
-     Critical = Urgent (0), High = High (1), Medium = Medium (2), Low = Low (3)
-   - For features (priority mapping):
-     Must-have = High (1), Should-have = Medium (2), Nice-to-have = Low (3)
-
-3. **Assign to project** (equivalent of epic).
-
-4. **Add requirement reference** in description.
-
-### 5d. GitLab Issue Creation
-
-Use glab CLI, MCP, or API:
-
-1. **Create issues:**
-   - True defects: Label `bug`
-   - Story updates: Label `story-update`
-   - Features: Label `feature`
-
-2. **Severity labels** (defects/story-updates only): `severity::critical`, `severity::high`, `severity::medium`, `severity::low`. Features do not get severity labels.
-
-3. **Assign to milestone.**
-
-4. **Add requirement reference** in description using `#[issue]` linking.
+Load `phases/platform-submission.md` and follow the relevant section for the detected platform.
 
 ---
 
