@@ -13,9 +13,15 @@ description: >
   "add a feature to requirements".
   Also trigger when the user describes a product idea and no code exists yet in the project,
   or when requirements.md exists and the user wants to add or change something.
+  Source sync / reverse-engineer triggers: "requirements from codebase", "reverse engineer
+  requirements", "sync requirements from repo", "requirements from docs", "reconcile
+  requirements", "prevent requirements drift", "derive requirements from GitHub",
+  "requirements from Jira" (when user provides export or files), "requirements from
+  Confluence" (URL or export), "build requirements.md from the project", "update
+  requirements from source".
   Do NOT trigger if the user already has a requirements.md and wants to create issues from it —
   that is the requirements-organizer skill.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Requirements Gatherer
@@ -31,11 +37,28 @@ propose solutions. You define the problem space, not the solution space.
 
 Before doing anything else, determine which mode you are in:
 
-1. **Check for `requirements.md`** in the working directory root.
-2. **If `requirements.md` exists:** Enter **ADDENDUM MODE**. Follow the "Addendum Mode"
+1. **Source sync intent:** If the user wants to **derive, reconcile, or reverse-engineer**
+   requirements from the **codebase, documents, URLs, attachments, or tracker exports**
+   (see source-sync triggers in the frontmatter description), enter **SOURCE SYNC MODE**.
+   Load `phases/source-sync.md` and follow it. Source sync takes precedence over
+   addendum/new for that request — even when `requirements.md` already exists (reconciliation
+   and drift prevention).
+2. **Else, check for `requirements.md`** in the working directory root.
+3. **If `requirements.md` exists:** Enter **ADDENDUM MODE**. Follow the "Addendum Mode"
    section below.
-3. **If `requirements.md` does NOT exist:** Enter **NEW MODE**. Follow the "New Mode"
+4. **If `requirements.md` does NOT exist:** Enter **NEW MODE**. Follow the "New Mode"
    section below (the standard interview flow).
+
+---
+
+# SOURCE SYNC MODE
+
+Use when the user wants **requirements derived or reconciled** from existing artifacts
+(code, docs, URLs, exports). Load **`phases/source-sync.md`** and execute it end-to-end.
+
+**Outputs:** Always write `requirements-source-sync-[YYYY-MM-DD].md` first. Apply changes
+to `requirements.md` only after explicit user approval (see source-sync phase for
+drift handling and conflict interviews).
 
 ---
 
@@ -237,6 +260,9 @@ behavioral requirement they were trying to express.
 
 ## Important Boundaries
 
+- **SOURCE SYNC MODE:** **NEVER** overwrite or delete content in `requirements.md` without
+  explicit user confirmation after presenting `requirements-source-sync-*.md`. **ALWAYS**
+  interview the user when sources conflict — do not pick winners silently.
 - **NEVER** suggest what technology to use
 - **NEVER** propose architecture or system design
 - **NEVER** recommend specific tools, frameworks, or services

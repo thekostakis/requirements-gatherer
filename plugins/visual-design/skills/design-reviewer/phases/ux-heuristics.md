@@ -20,6 +20,11 @@ Examples that are **functional** (escalate): adding a confirmation dialog, movin
   with a 3-second delay before escalating the failure.
 - **Bash timeout:** All bash commands must use a 30-second timeout.
 
+## Progress log (opus parent, Category F)
+
+If **`PROGRESS_LOG`** is set, append Category F lines per **`references/agent-progress.md`**
+(opus parent: one line per H1–H10, then overall score line).
+
 ---
 
 ## Category F: UX and Usability Review

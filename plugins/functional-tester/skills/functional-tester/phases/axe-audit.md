@@ -4,6 +4,9 @@ This phase runs WCAG accessibility checks through @axe-core/playwright, providin
 integration with the Playwright test framework than a standalone CLI tool. It is
 **report-only** — produce categorized fix suggestions but do NOT apply any changes.
 
+If **`PROGRESS_LOG`** is set, the **opus parent** appends axe milestones per
+**`references/agent-progress.md`**.
+
 ---
 
 ## Step 7: axe Accessibility Audit (via @axe-core/playwright)

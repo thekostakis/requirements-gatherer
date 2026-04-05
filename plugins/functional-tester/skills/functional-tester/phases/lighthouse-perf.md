@@ -4,6 +4,10 @@ This phase runs the Lighthouse audit, budget assertions, and full-stack performa
 analysis. It is **report-only** — produce categorized fix suggestions but do NOT apply
 any changes.
 
+If **`PROGRESS_LOG`** is set (functional-tester agent), the **opus parent** appends
+`lighthouse | started` / `complete` (or `skipped` + reason) per
+**`references/agent-progress.md`**.
+
 ---
 
 ## Step 6: Lighthouse Audit

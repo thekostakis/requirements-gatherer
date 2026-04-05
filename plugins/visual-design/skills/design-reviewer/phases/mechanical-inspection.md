@@ -11,6 +11,13 @@ interaction uses chrome-devtools-mcp.
 - **Bash timeout:** All bash commands must use a 30-second timeout
   (prefix with `timeout 30` or equivalent).
 
+## Progress log (agent / haiku sub-agent)
+
+If dispatch includes **`PROGRESS_LOG`** (absolute path), the **haiku sub-agent** appends
+**granular** lines as Categories **A–E** complete **per component or page**. Use
+**`references/agent-progress.md`** for the `printf` pattern and responsibilities. The
+sub-agent performs **most** appends; the opus parent appends milestones only.
+
 ---
 
 ## Consultant Synergy

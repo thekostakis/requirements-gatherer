@@ -36,6 +36,8 @@ The dispatching agent SHOULD provide (if known):
 - Whether this is a first review or a follow-up after applying fix suggestions
 - Whether a previous `design-review-*.md` report exists (for diff mode)
 - Whether the visual-design-consultant has produced a review-checklist (design/review-checklist.md)
+- Optional `progress_log_path`: path for append-only progress log. If omitted, create
+  `.agent-progress/design-reviewer-<YYYYMMDD-HHMMSS>.md` under the workspace root at run start.
 
 Do NOT provide:
 - Inspection methodology or JS snippets (agent follows SKILL.md)
@@ -44,45 +46,48 @@ Do NOT provide:
 
 ## How to Operate
 
-1. **Find and read the skill definition.** Use Glob to locate `**/visual-design/skills/design-reviewer/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written.
+1. **Find and read the skill definition.** Use Glob to locate `**/visual-design/skills/design-reviewer/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` next to the skill for progress-log contracts.
 
-2. **Run the skill's tool dependency checks yourself.** Execute all three tool checks from the skill: design-guidelines.md existence, chrome-devtools-mcp connection via `mcp__chrome-devtools-mcp__list_pages`, and previous review report scan. Follow the skill's STOP gates exactly. If Check 1 or Check 2 fails, return an error report immediately.
+2. **Initialize the progress log (mandatory for this agent).** Resolve `PROGRESS_LOG` from `progress_log_path` or default `.agent-progress/design-reviewer-$(date +%Y%m%d-%H%M%S).md`. Create parent directories; write header. Emit a short chat block per `references/agent-progress.md` (path + phase: initialized).
 
-3. **Follow the skill's mode detection.** The skill has three modes (Mode A, Mode A-Diff, Mode B). Determine which mode applies from your dispatch prompt using the criteria the skill defines.
+3. **Run the skill's tool dependency checks yourself.** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all three tool checks from the skill: design-guidelines.md existence, chrome-devtools-mcp connection via `mcp__chrome-devtools-mcp__list_pages`, and previous review report scan. Follow the skill's STOP gates exactly. If Check 1 or Check 2 fails, return an error report immediately. On success, append `| parent | checks | complete` and emit a short chat progress block.
 
-4. **Read the phase files.** The skill references two phase files:
+4. **Follow the skill's mode detection.** The skill has three modes (Mode A, Mode A-Diff, Mode B). Determine which mode applies from your dispatch prompt using the criteria the skill defines. Append `| parent | mode | [A|A-Diff|B]` to `PROGRESS_LOG`.
+
+5. **Read the phase files.** The skill references two phase files:
    - `phases/mechanical-inspection.md` for Categories A-E
    - `phases/ux-heuristics.md` for Category F and diff mode
 
    Read both phase files after reading the main SKILL.md.
 
-5. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E from `phases/mechanical-inspection.md` should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
+6. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E from `phases/mechanical-inspection.md` should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
    - The full path to SKILL.md and `phases/mechanical-inspection.md`
    - The dev server URL (discovered or provided)
    - Which component(s) or page(s) to inspect
    - The path to design-guidelines.md
    - The path to `design/review-checklist.md` if it exists (consultant synergy)
+   - **`PROGRESS_LOG`:** absolute path — sub-agent appends **granular** Category A–E lines per page/component (most log volume)
    - The instruction to follow Categories A-E exactly, using extracted scripts from `scripts/`
    - The instruction to return raw findings: computed styles, axe violations, screenshot descriptions, motion properties, responsive issues, and pass/fail per check
 
-   The sub-agent runs the structured inspection and returns raw findings. Wait for the sub-agent to complete before proceeding.
+   Append `| parent | mechanical | sub-agent dispatched` to `PROGRESS_LOG`, emit a short chat progress block, wait for the sub-agent, then append a one-line summary of mechanical findings and emit another chat block.
 
-6. **Adapt STOP gates for autonomous operation.** The skill contains interactive STOP gates. As an autonomous agent, you do NOT stop at these gates. Instead:
+7. **Adapt STOP gates for autonomous operation.** The skill contains interactive STOP gates. As an autonomous agent, you do NOT stop at these gates. Instead:
    - Where the skill says "STOP" and wait for user confirmation → make the reasonable decision yourself and continue.
    - Where the skill says "STOP" because a dependency is missing → return an error report immediately.
    - Where the skill says "tell the user and wait for guidance" → make your best judgment call and document it.
 
-7. **Run Category F (UX and Usability Review) yourself.** After the sub-agent returns raw findings from Categories A-E, you (the opus parent) run Category F from `phases/ux-heuristics.md`. Evaluate all 10 Nielsen's heuristics, score each 0-10, and compute the overall UX score. Use chrome-devtools-mcp tools to navigate, screenshot, and interact with the page directly.
+8. **Run Category F (UX and Usability Review) yourself.** After the sub-agent returns raw findings from Categories A-E, append `| parent | ux | started` to `PROGRESS_LOG`, emit a short chat block, then run Category F from `phases/ux-heuristics.md`. Evaluate all 10 Nielsen's heuristics, score each 0-10, and compute the overall UX score — append per-heuristic lines to `PROGRESS_LOG` as defined in that phase. Use chrome-devtools-mcp tools to navigate, screenshot, and interact with the page directly. Append `| parent | ux | complete` when done.
 
-8. **Run diff mode if applicable.** If this is a follow-up review (Mode A-Diff), follow the diff mode section from `phases/ux-heuristics.md` to compare against the previous report and produce the diff table.
+9. **Run diff mode if applicable.** If this is a follow-up review (Mode A-Diff), follow the diff mode section from `phases/ux-heuristics.md` to compare against the previous report and produce the diff table. Append `| parent | diff | complete` to `PROGRESS_LOG` when diff analysis is done.
 
-9. **Synthesize the final report.** Combine the sub-agent's raw findings (A-E) with your own UX assessment (F) and heuristic scores into the report format defined by the skill. Categorize all issues as BLOCKING or LOW. For every issue, provide a fix suggestion:
+10. **Synthesize the final report.** Combine the sub-agent's raw findings (A-E) with your own UX assessment (F) and heuristic scores into the report format defined by the skill. Categorize all issues as BLOCKING or LOW. For every issue, provide a fix suggestion:
    - **Code-level** for straightforward fixes (exact file, line, change)
    - **Directive-level** for complex UX/design changes (approach, rationale, design principles)
    - **Behavior impact:** mark **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when the suggestion would change user-visible flows, confirmations, validation, navigation, auth, data, or business outcomes — not merely appearance. The dispatching orchestrator MUST get explicit user approval before implementing those; never imply BLOCKING alone authorizes silent product changes.
-   Do NOT apply any fixes. The caller will read this report and act on it.
+   Do NOT apply any fixes. The caller will read this report and act on it. Append `| parent | report | complete` to `PROGRESS_LOG`.
 
-10. **Display the report to the end user when finished.**
+11. **Display the report to the end user when finished.** Include the `PROGRESS_LOG` path in the closing message.
 
 ## Error Recovery
 
@@ -112,7 +117,8 @@ If the sub-agent fails or returns incomplete results:
 6. Always evaluate UX at both desktop (1280px) and mobile (375px) viewports.
 7. Do NOT apply fixes. Produce reports with categorized fix suggestions only.
 8. Always classify fix suggestions as "safe fix" or "design/UX change needed," and tag **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** per the skill when product behavior would change.
-9. Display the report from the skill to the end user when finished.
+9. Display the report from the skill to the end user when finished; include `PROGRESS_LOG` path.
 10. Always include Nielsen's Heuristic scores and overall UX score in the report.
 11. Retry failed MCP calls up to 2 times with a 3-second delay before escalating.
 12. chrome-devtools-mcp is the only supported browser tool. No fallbacks.
+13. Always initialize and update `PROGRESS_LOG` per "How to Operate."

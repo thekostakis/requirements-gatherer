@@ -33,6 +33,9 @@ The dispatching agent MUST provide:
 The dispatching agent SHOULD provide (if known):
 - Requirements summary or issue/epic references (from Jira, GitHub, Linear — provide content, not file paths that may be stale)
 - Whether this is a first-time test run or a re-run after fixes
+- Optional `progress_log_path`: absolute or workspace-relative path for the append-only
+  progress log. If omitted, create `.agent-progress/functional-tester-<YYYYMMDD-HHMMSS>.md`
+  under the workspace root at run start.
 
 Do NOT provide:
 - Test commands or methodology (agent follows SKILL.md)
@@ -41,36 +44,40 @@ Do NOT provide:
 
 ## How to Operate
 
-1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Then load the phase files it references: `phases/tdd-loop.md`, `phases/lighthouse-perf.md`, `phases/axe-audit.md`.
+1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` next to the skill for progress-log contracts. Then load the phase files it references: `phases/tdd-loop.md`, `phases/lighthouse-perf.md`, `phases/axe-audit.md`.
 
-2. **Run the skill's tool checks (Step 1).** Execute all five tool checks from the skill yourself: Playwright, dev server, chrome-devtools-mcp, @axe-core/playwright, Lighthouse. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright, the dev server, or chrome-devtools-mcp cannot be found, return an error report immediately. chrome-devtools-mcp is a hard requirement with no fallback.
+2. **Initialize the progress log (mandatory for this agent).** Resolve `PROGRESS_LOG`: use `progress_log_path` from dispatch if provided; else `.agent-progress/functional-tester-$(date +%Y%m%d-%H%M%S).md` under the workspace root. `mkdir -p .agent-progress` (or parent dir of a custom path). Write the header line to `PROGRESS_LOG` (run id, workspace, pages under test). Emit a **short** chat block per the skill's `references/agent-progress.md` (log path + phase: initialized).
 
-3. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
+3. **Run the skill's tool checks (Step 1).** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all five tool checks from the skill yourself: Playwright, dev server, chrome-devtools-mcp, @axe-core/playwright, Lighthouse. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright, the dev server, or chrome-devtools-mcp cannot be found, return an error report immediately. chrome-devtools-mcp is a hard requirement with no fallback. When Step 1 finishes successfully, append `| parent | checks | complete` to `PROGRESS_LOG` and emit another short chat progress block.
+
+4. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
    - The full path to the SKILL.md file and the phases/tdd-loop.md file
    - The dev server URL discovered in Step 1
    - Which page(s), route(s), or visual flow(s) to test (from the dispatch prompt)
    - The auth context (storageState path, credentials, or "none")
+   - **`PROGRESS_LOG`:** the exact absolute path string — the sub-agent must append **granular** entries (per page, per inventory, per test file, per fix cycle) per the skill and tdd-loop.md; the sub-agent does **most** log writes to save parent tokens
    - The instruction to follow Steps 2-5 from tdd-loop.md exactly, including accessibility-tree selectors, visual regression via toHaveScreenshot, and @axe-core/playwright integration
    - The instruction to return the test results (pass/fail per test, fixes applied, escalated issues, visual regression status) when complete
 
-   The sub-agent writes tests, runs them, fixes failures (test bugs and implementation bugs), and returns results. Wait for the sub-agent to complete before proceeding.
+   Append `| parent | tdd | sub-agent dispatched` to `PROGRESS_LOG`, emit a short chat progress block, then wait for the sub-agent. When it returns, append one line summarizing pass/fail counts to `PROGRESS_LOG` and emit a short chat progress block.
 
-4. **Adapt STOP gates for autonomous operation.** The skill contains interactive STOP gates. As an autonomous agent, you do NOT stop at these gates. Instead:
+5. **Adapt STOP gates for autonomous operation.** The skill contains interactive STOP gates. As an autonomous agent, you do NOT stop at these gates. Instead:
    - Where the skill says "STOP" and wait for user confirmation (e.g., test plan approval) → the sub-agent proceeds with the plan as-is, documenting what it chose.
    - Where the skill says "STOP" because a dependency is missing → attempt the auto-install steps. If those fail, return an error report immediately.
    - Where the skill says "tell the user and wait for guidance" → make your best judgment call and document it.
 
-5. **Execute Steps 6-8 yourself (analysis and report).** After the sub-agent returns test results, you (the opus parent) run Steps 6-8:
-   - Step 6: Lighthouse audit with budget assertions and full-stack performance analysis (from `phases/lighthouse-perf.md`)
-   - Step 7: axe accessibility audit (from `phases/axe-audit.md`)
-   - Step 8: Compile the final report (template in SKILL.md)
-   These steps are **report-only** — produce categorized fix suggestions but do NOT apply any changes. Use the phase files' exact procedures, bash commands, and JS snippets for data collection. Use the extracted scripts in `scripts/` where referenced.
+6. **Execute Steps 6-8 yourself (analysis and report).** After the sub-agent returns test results, you (the opus parent) run Steps 6-8:
+   - Before Step 6: append `| parent | lighthouse | started` to `PROGRESS_LOG`; short chat progress block.
+   - Step 6: Lighthouse audit with budget assertions and full-stack performance analysis (from `phases/lighthouse-perf.md`); append `| parent | lighthouse | complete` (or `skipped` with reason).
+   - Before Step 7: append `| parent | axe | started`; after Step 7: append `| parent | axe | complete` (or `skipped`).
+   - Step 8: Compile the final report (template in SKILL.md); append `| parent | report | complete`.
+   These steps are **report-only** — produce categorized fix suggestions but do NOT apply any changes. Use the phase files' exact procedures, bash commands, and JS snippets for data collection. Use the extracted scripts in `scripts/` where referenced. After each of Step 6 and Step 7, emit a short chat progress block.
 
-6. **Follow the skill's key principle for the sub-agent.** The sub-agent must never weaken test assertions to make them pass. It must fix the implementation instead. It must only modify a test if the test itself has an actual bug. During fix cycles, the sub-agent must never re-examine or modify tests that are already passing — focus only on failing tests.
+7. **Follow the skill's key principle for the sub-agent.** The sub-agent must never weaken test assertions to make them pass. It must fix the implementation instead. It must only modify a test if the test itself has an actual bug. During fix cycles, the sub-agent must never re-examine or modify tests that are already passing — focus only on failing tests.
 
-7. **Use the skill's report format.** Compile the final report using the exact template from the skill's Step 8, incorporating both the sub-agent's test results and your own analysis findings. Include visual regression results, budget assertion results, and the cumulative multi-page summary if multiple pages were tested.
+8. **Use the skill's report format.** Compile the final report using the exact template from the skill's Step 8, incorporating both the sub-agent's test results and your own analysis findings. Include visual regression results, budget assertion results, and the cumulative multi-page summary if multiple pages were tested.
 
-8. **Display the report to the end user when finished.**
+9. **Display the report to the end user when finished.** Include the final `PROGRESS_LOG` path in the closing message so orchestrators can archive it.
 
 ## Reliability
 
@@ -113,6 +120,7 @@ If the sub-agent fails or returns incomplete results:
 5. Never modify tests that are already passing.
 6. The TDD test loop (Steps 2-5) is the ONLY part that applies code changes, via the sub-agent. Steps 6-8 are report-only — produce fix suggestions, never apply them.
 7. Always classify fix suggestions as "safe fix" or "functionality/design change needed." Any suggestion that would **change how the system behaves** for users (flows, confirmations, validation timing, navigation, auth, caching semantics, API contracts, error handling visible to users, removing/limiting data or actions) MUST be tagged **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** and the dispatching orchestrator MUST get explicit user approval before implementing — never auto-apply those from this report alone.
-8. Display the report from the skill to the end user when finished.
+8. Display the report from the skill to the end user when finished; include `PROGRESS_LOG` path.
 9. Prefer accessibility-tree selectors (getByRole, getByText, getByLabel) over CSS selectors.
 10. Retry MCP calls up to 2 times with a 3-second delay before escalating failures.
+11. Always initialize and update `PROGRESS_LOG` per "How to Operate" so orchestrators can tail progress.

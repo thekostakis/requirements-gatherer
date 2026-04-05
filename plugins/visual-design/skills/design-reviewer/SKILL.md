@@ -10,7 +10,9 @@ description: >
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
   Uses chrome-devtools-mcp for live browser inspection. Includes Nielsen's 10 Usability
   Heuristics framework with UX scoring (0-100) and diff mode for follow-up reviews.
-version: 4.0.1
+  When dispatched as the design-reviewer agent, writes granular progress to `.agent-progress/`
+  (see `references/agent-progress.md`) and emits short parent summaries for orchestrators.
+version: 4.0.8
 ---
 
 # Design Reviewer
@@ -19,6 +21,13 @@ Senior creative director and UI/UX usability expert quality gate. Verify that im
 components match the project's design system, look visually appealing, deliver excellent
 usability on both desktop and mobile, and meet accessibility standards using live browser
 inspection via chrome-devtools-mcp.
+
+## Agent progress log (orchestrator visibility)
+
+When this skill runs **under the design-reviewer agent** or dispatch includes
+`progress_log_path`, keep an append-only log and short chat milestones. **Read and follow
+`references/agent-progress.md`** for path conventions, append pattern, haiku vs opus
+roles, and chat summary template.
 
 ## Tool Dependency Check (MANDATORY -- RUN FIRST)
 
@@ -235,3 +244,6 @@ Delta: +/-XX
 12. **ALWAYS tag behavior-changing recommendations** with **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when implementation would alter how the product works for users (not merely how it looks). The caller MUST escalate those items to the end user before any fix — BLOCKING severity does not override this.
 13. **Retry MCP calls** up to 2 times with a 3-second delay before escalating.
 14. **Timeout all bash commands** at 30 seconds.
+15. **Agent runs:** If `progress_log_path` is set or running under the design-reviewer agent,
+    follow **`references/agent-progress.md`**; pass the same `PROGRESS_LOG` path to the haiku
+    mechanical sub-agent.

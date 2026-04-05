@@ -11,7 +11,10 @@ description: >
   Playwright AI agents (Planner, Generator, Healer) for resilient test authoring,
   @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot,
   and Lighthouse CI with budget assertions.
-version: 2.0.1
+  When dispatched as the functional-tester agent, writes granular progress to
+  `.agent-progress/` (see `references/agent-progress.md`) and emits short parent summaries
+  for orchestrators.
+version: 2.1.1
 ---
 
 # Functional Tester
@@ -27,6 +30,15 @@ skill.
 **Reliability:** If an MCP call fails, retry up to 2 times with a 3-second delay before
 escalating. All bash commands should use a 30-second timeout unless otherwise specified
 (e.g., `timeout 30 <command>` on Linux/Mac, or PowerShell `Start-Process -Wait`).
+
+---
+
+## Agent progress log (orchestrator visibility)
+
+When this skill runs **under the functional-tester agent** or dispatch includes
+`progress_log_path`, maintain an append-only log and short chat milestones. **Read and
+follow `references/agent-progress.md`** for path conventions, `printf` append pattern,
+haiku vs opus responsibilities, and chat summary template.
 
 ---
 
@@ -322,3 +334,6 @@ If multiple pages were tested in this session, include a summary table:
     selectors or data-testid in all test code.
 15. **Retry MCP calls** up to 2 times with a 3-second delay before escalating failures.
 16. **Timeout all bash commands** at 30 seconds unless a longer timeout is specified.
+17. **Agent runs:** If `progress_log_path` is set or running under the functional-tester
+    agent, follow **`references/agent-progress.md`**; sub-agent must receive the same
+    `PROGRESS_LOG` path.
