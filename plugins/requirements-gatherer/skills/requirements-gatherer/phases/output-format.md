@@ -177,3 +177,65 @@ suggested default.]
 ## New Glossary Terms
 - **[Term]**: [Definition in this project's context]
 ```
+
+---
+
+## §SourceSync — requirements-source-sync-[YYYY-MM-DD].md Format
+
+Write under the working directory root. This file is the **review gate** before any change
+to `requirements.md`.
+
+Only include sections that have content. Omit empty sections entirely.
+
+```markdown
+# Requirements source sync: [Project or product name]
+
+_Date: [YYYY-MM-DD]_
+_Status: Draft — pending review_
+_Sources: [short list]_
+
+## Executive summary
+[What was inferred from sources, how it compares to current `requirements.md` if one exists,
+and the main gaps or drifts in 5-8 sentences.]
+
+## Source inventory
+| Source | Type | Trust | Notes |
+|--------|------|-------|-------|
+
+## Behavioral extraction
+[Organize by Features, User flows, Users, NFRs, Integrations, Data concepts (conceptual only),
+Compliance — as needed. Every substantive bullet should cite evidence: file path, URL, or
+export reference.]
+
+## Gap and drift analysis
+### Gaps (missing from requirements.md)
+- ...
+
+### Drift (conflicts with requirements.md)
+- ...
+
+### Aligned (already documented)
+- ...
+
+## Conflicts and ambiguities
+[Where sources disagree or evidence is weak. For each: options A/B, questions for the user,
+and **leave unresolved** until the user answers — or note the resolution if already cleared
+in-session.]
+
+## Proposed edits to requirements.md
+[Section-by-section. For each proposed change:]
+- **Section:** [e.g. Features / User Flows / …]
+- **Current (summary or short quote):** ...
+- **Proposed:** ...
+- **Rationale:** ...
+- **Risk if wrong:** ...
+
+## Confirmation checklist (for the user)
+- [ ] I reviewed this sync artifact
+- [ ] Conflicts were resolved (or listed as open questions)
+- [ ] I approve creating or updating `requirements.md` as discussed (or I want an addendum only)
+
+## Next step
+[One sentence: e.g. "After you confirm, I will write requirements.md" or "apply section X
+only."]
+```

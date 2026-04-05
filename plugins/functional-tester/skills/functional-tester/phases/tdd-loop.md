@@ -5,6 +5,13 @@ selectors, visual regression, @axe-core/playwright integration, and the fix loop
 
 **This is the ONLY phase that applies code changes.** Steps 6-8 are report-only.
 
+## Progress log (agent / haiku sub-agent)
+
+If the dispatch context includes **`PROGRESS_LOG`** (absolute path), append **compact**
+entries as work proceeds — **sub-agent does most logging** (parent saves tokens). Follow
+**`references/agent-progress.md`** for the `printf` pattern, field tags, and minimum append
+points (Steps 2–5). Tag lines `| sub | tdd | ...`.
+
 ---
 
 ## Step 2: Identify What to Test

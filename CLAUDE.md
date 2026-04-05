@@ -10,14 +10,14 @@ A Claude Code plugin marketplace (`functional-design-tools`) containing four plu
 
 - `.claude-plugin/marketplace.json` — marketplace index listing all plugins with versions
 - `plugins/<name>/.claude-plugin/plugin.json` — per-plugin manifest (name, version, keywords)
-- `plugins/<name>/skills/<skill>/SKILL.md` — interactive skills (run in main conversation)
+- `plugins/<name>/skills/<skill>/SKILL.md` — interactive skills (run in main conversation); optional `references/` (e.g. design-reviewer and functional-tester `references/agent-progress.md`)
 - `plugins/<name>/agents/<agent>.md` — autonomous subagents (dispatched via Agent tool)
 - `plugins/<name>/scripts/` — supporting files shipped with the plugin
 
 Four plugins:
-- **requirements-gatherer** (v1.1.0) — requirements interview + GitHub/Jira issue creation
-- **visual-design** (v4.0.6) — design system, component specs, **visual-design-consultant** (interview/extraction; **codebase reverse-engineering** loads `phases/codebase-reverse-engineering.md` — chrome-devtools-mcp for routes, written spec `docs/design-system/codebase-reverse-spec-*.md`, one section per guidelines/motion/component, per-file delete confirmation), **component-context agent** (exact or ~90%+ fuzzy → **entire** matched spec file + motion; top-3 full files + synthesis + motion when ambiguous; gap + motion), design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy, functional-change escalation tags on review output
-- **functional-tester** (v2.0.1) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance, functional-change escalation on report-only audits
+- **requirements-gatherer** (v1.2.0) — requirements interview; **source sync** (`phases/source-sync.md`) to derive or reconcile `requirements.md` from repo/docs/URLs/attachments with drift analysis and explicit approval before overwrite; GitHub/Jira issue creation via organizer
+- **visual-design** (v4.0.8) — design system, component specs, **visual-design-consultant** (interview/extraction; **codebase reverse-engineering** loads `phases/codebase-reverse-engineering.md` — chrome-devtools-mcp for routes, written spec `docs/design-system/codebase-reverse-spec-*.md`, one section per guidelines/motion/component, per-file delete confirmation), **component-context agent** (exact or ~90%+ fuzzy → **entire** matched spec file + motion; top-3 full files + synthesis + motion when ambiguous; gap + motion), design-reviewer agent with Nielsen's UX heuristics scoring, diff mode, consultant synergy, functional-change escalation tags on review output, `.agent-progress/` run logs when dispatched as agent
+- **functional-tester** (v2.1.1) — Playwright AI agents, TDD fix loop, @axe-core/playwright, visual regression, Lighthouse budgets, full-stack performance, functional-change escalation on report-only audits; `.agent-progress/` run logs when dispatched as agent
 - **defect-gatherer** (v1.2.2) — defect/issue intake (bugs, problems, regressions), story/spec change requests, concrete feature requests; dispatch (URL or API endpoint); organizer submits to trackers
 
 ## Agent Architecture (opus + haiku)
@@ -27,6 +27,7 @@ Four plugins:
 **`visual-design:design-reviewer`** and **`functional-tester:functional-tester`** use a two-tier dispatch pattern:
 - **Opus parent** handles judgment-heavy work: UX/usability review with Nielsen's heuristics (design-reviewer), full-stack performance analysis (functional-tester), and final report synthesis
 - **Haiku sub-agent** handles mechanical work: structured CSS inspection (design-reviewer), Playwright TDD test loop with AI agents (functional-tester)
+- **Run progress:** design-reviewer and functional-tester agents write append-only logs under `.agent-progress/` (optional `progress_log_path` in dispatch); haiku sub-agents do most granular appends, opus parent emits short chat milestones + final log path
 - Agents are **report-only** for audit/analysis steps — they produce categorized fix suggestions but do not apply changes (only the functional-tester's TDD sub-agent applies code fixes during the test loop)
 - Agents are **proxies to skills**: they Glob + Read the corresponding SKILL.md and phase files at runtime, keeping the skill as the single source of truth
 - All browser interaction uses **chrome-devtools-mcp** (fail-fast, no fallback)
