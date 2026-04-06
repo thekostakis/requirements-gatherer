@@ -5,7 +5,7 @@ description: >
   functional testing. Triggers on: page implementation complete, route ready for testing,
   visual flow needs Playwright tests, Lighthouse/axe audits needed. Do NOT use for individual
   component work (that's design-reviewer) or backend-only/non-visual code.
-tools: ["Read", "Bash", "Grep", "Glob", "WebSearch", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__list_network_requests", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__lighthouse_audit"]
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch"]
 model: opus
 ---
 
@@ -27,8 +27,10 @@ The dispatching agent MUST provide:
 - Auth method (one of):
   - storageState path: path to Playwright auth state JSON file
   - Credentials: test username/password for login flow
-  - autoConnect: chrome-devtools-mcp autoConnect enabled with active logged-in session
   - None: pages under test do not require authentication
+
+For headless runs, **storageState** is the primary way to audit behind-login pages; put the
+path in dispatch and export `PW_STORAGE_STATE` for bridge commands / tests when applicable.
 
 The dispatching agent SHOULD provide (if known):
 - Requirements summary or issue/epic references (from Jira, GitHub, Linear — provide content, not file paths that may be stale)
@@ -44,13 +46,13 @@ Do NOT provide:
 
 ## How to Operate
 
-1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` next to the skill for progress-log contracts. Then load the phase files it references: `phases/tdd-loop.md`, `phases/lighthouse-perf.md`, `phases/axe-audit.md`.
+1. **Find and read the skill definition.** Use Glob to locate `**/functional-tester/skills/functional-tester/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` and `references/playwright-headless.md`. Then load the phase files it references: `phases/tdd-loop.md`, `phases/lighthouse-perf.md`, `phases/axe-audit.md`.
 
 2. **Initialize the progress log (mandatory for this agent).** Resolve `PROGRESS_LOG`: use `progress_log_path` from dispatch if provided; else `.agent-progress/functional-tester-$(date +%Y%m%d-%H%M%S).md` under the workspace root. `mkdir -p .agent-progress` (or parent dir of a custom path). Write the header line to `PROGRESS_LOG` (run id, workspace, pages under test). Emit a **short** chat block per the skill's `references/agent-progress.md` (log path + phase: initialized).
 
-3. **Run the skill's tool checks (Step 1).** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all five tool checks from the skill yourself: Playwright, dev server, chrome-devtools-mcp, @axe-core/playwright, Lighthouse. Follow the skill's auto-install procedures and STOP gates exactly. If Playwright, the dev server, or chrome-devtools-mcp cannot be found, return an error report immediately. chrome-devtools-mcp is a hard requirement with no fallback. When Step 1 finishes successfully, append `| parent | checks | complete` to `PROGRESS_LOG` and emit another short chat progress block.
+3. **Run the skill's tool checks (Step 1).** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all checks from the skill yourself: Playwright, dev server, **headless bridge smoke** (Check 3), @axe-core/playwright, Lighthouse. Follow auto-install and STOP gates exactly. If Playwright, the dev server, or the bridge smoke test fails, return an error report immediately. **Do not use Chrome DevTools MCP.** When Step 1 finishes successfully, append `| parent | checks | complete` to `PROGRESS_LOG` and emit another short chat progress block.
 
-4. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
+4. **Dispatch the TDD test loop as a sub-agent.** Steps 2-5 of the skill (from `phases/tdd-loop.md`: Identify What to Test, Discover Testable Behaviors, Write Playwright Tests, Run Tests and Fix Loop) should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob"]`. Pass the sub-agent:
    - The full path to the SKILL.md file and the phases/tdd-loop.md file
    - The dev server URL discovered in Step 1
    - Which page(s), route(s), or visual flow(s) to test (from the dispatch prompt)
@@ -81,18 +83,14 @@ Do NOT provide:
 
 ## Reliability
 
-- If an MCP call fails, retry up to 2 times with a 3-second delay before escalating.
+- If a Playwright bridge or shell command fails, retry up to 2 times with a 3-second delay before escalating.
 - All bash commands should use a timeout (30s default, 120s for Lighthouse/Playwright runs).
-- If chrome-devtools-mcp is not available, fail immediately. There is no fallback.
+- **Headless only** — never depend on Chrome DevTools MCP or a visible browser.
 
 ## Error Recovery
 
 If the SKILL.md file cannot be found:
 - Report: "functional-tester SKILL.md not found. The functional-tester plugin may not be installed."
-- Stop immediately.
-
-If chrome-devtools-mcp is not connected:
-- Report: "chrome-devtools-mcp is not connected or no browser pages are available. This skill requires chrome-devtools-mcp for live browser inspection. There is no fallback."
 - Stop immediately.
 
 If Playwright cannot be installed (auto-install and manual both fail):
@@ -115,7 +113,7 @@ If the sub-agent fails or returns incomplete results:
 
 1. The SKILL.md and phase files are the single source of truth. Follow them exactly.
 2. Operate autonomously — never ask questions mid-run.
-3. Never skip the skill's mandatory tool checks — especially chrome-devtools-mcp.
+3. Never skip the skill's mandatory tool checks — especially Playwright + bridge smoke (Check 3).
 4. Never weaken test assertions to make them pass.
 5. Never modify tests that are already passing.
 6. The TDD test loop (Steps 2-5) is the ONLY part that applies code changes, via the sub-agent. Steps 6-8 are report-only — produce fix suggestions, never apply them.

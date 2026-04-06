@@ -26,7 +26,9 @@ description: >
   we build", full MVP scoping, requirements interview) or for design-only reviews — use
   requirements-gatherer or design-reviewer. DO trigger when the user is filing a concrete
   gap, change, or request against existing behavior or documented stories.
-version: 1.2.2
+  Visual / UI defects: **headless Playwright** via `scripts/playwright-skill-bridge.mjs` (same
+  pattern as functional-tester) — CI-safe, no Chrome DevTools MCP.
+version: 1.2.3
 ---
 
 # Defect Reporter
@@ -49,7 +51,7 @@ The dispatching agent MUST provide:
 The dispatching agent SHOULD provide:
 - Expected behavior (if known)
 - Environment details (browser, OS, relevant config)
-- Auth method if page requires login (storageState path, credentials, autoConnect, or none)
+- Auth method if page requires login (`PW_STORAGE_STATE` path, scripted credentials, or none)
 
 The defect-reporter will infer reproduction steps, expected behavior, and actual behavior
 from the page URL or API endpoint context and dispatch notes. The full intake interview (Step 3) may be abbreviated
@@ -66,14 +68,41 @@ Do NOT provide:
 Before doing ANY work, check which tools are available. These checks determine your
 investigation capabilities but neither one blocks the skill.
 
-### Check 1: Chrome Browser Tools
+**Playwright bridge reference:** Read `references/playwright-headless.md` for `BRIDGE`
+resolution, env vars, and commands before any visual investigation.
 
-Call `mcp__chrome-devtools-mcp__list_pages` to verify the chrome-devtools-mcp connection is active.
+### Check 1: Playwright and headless bridge
 
-If the call fails or returns an error: note that visual inspection via chrome-devtools-mcp
-tools will NOT be available for this session. Continue — visual inspection is optional. If the
-bug turns out to be visual, you will fall back to user-described evidence (see Step 4
-fallback path).
+Verify Playwright CLI is available:
+
+~~~bash
+timeout 30 npx playwright --version 2>/dev/null || echo "MISSING"
+~~~
+
+If **MISSING**, attempt auto-install (same as functional-tester):
+
+~~~bash
+timeout 60 npm init playwright@latest -- --yes
+timeout 60 npx playwright install --with-deps chromium
+~~~
+
+Re-check. If still missing: note that **headless visual inspection will NOT be available**
+for this session. Continue — visual inspection is optional; use the user-described evidence
+path in Step 4 when the bug is visual.
+
+Locate the bridge script (defect-gatherer copy preferred; same fallbacks as `playwright-headless.md`):
+
+~~~bash
+timeout 30 bash -c 'B="$(find . -path "*/defect-gatherer/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null)"; test -n "$B" || B="$(find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null)"; test -n "$B" || B="$(find . -path "*/visual-design/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null)"; echo "${B:-NOT_FOUND}"'
+~~~
+
+If the result is `NOT_FOUND`: note that the bridge script was not found and headless visual
+inspection is unavailable until the plugin scripts are present.
+
+**Optional smoke:** If the user or dispatch already provided a full page URL, you may run
+`node "$BRIDGE" snapshot "<URL>"` (with `PW_IGNORE_HTTPS_ERRORS=1` / `PW_STORAGE_STATE` as
+needed) to confirm navigation works. If it fails after retries, record the error and treat
+headless inspection as degraded for this session.
 
 ### Check 2: Requirements File
 
@@ -256,11 +285,13 @@ through results, but it would significantly improve usability. Does that priorit
 
 Attempt to independently verify the bug:
 
-- **For visual bugs (Chrome tools available):** Navigate to the page, follow the
-  reproduction steps, and confirm the issue is visible.
-- **For visual bugs (Chrome tools NOT available):** State that independent reproduction
-  was not possible without browser tools, and note whether the user's description and
-  evidence are consistent and credible.
+- **For visual bugs (Playwright bridge available):** Use the bridge against the page URL
+  (screenshot + snapshot and/or `run` scripts per `phases/investigation.md`), follow the
+  reproduction steps where automatable, and confirm whether the issue is visible or
+  inferable from captured evidence.
+- **For visual bugs (Playwright NOT available or navigation failed):** State that
+  independent headless reproduction was limited or impossible, and note whether the user's
+  description and evidence are consistent and credible.
 - **For API/non-visual bugs:** Trace the code path and confirm that the logic produces
   the incorrect result described by the user.
 
@@ -391,8 +422,9 @@ All defect files are in the `defects/` directory.
    for confirmation.
 6. **NEVER auto-assign severity or priority.** Always present your proposal with reasoning
    and let the user confirm.
-7. **NEVER silently degrade.** If chrome-devtools-mcp tools are unavailable for a visual bug, inform
-   the user explicitly and explain the limitation before proceeding.
+7. **NEVER silently degrade.** If Playwright or the bridge is unavailable, or headless
+   navigation fails for a visual bug, inform the user explicitly and explain the limitation
+   before proceeding.
 8. **Ask 1-2 questions at a time.** Never dump a list of questions.
 9. **Use research tools silently.** When reading code or requirements, do not announce
    every file read — come prepared with informed questions and proposals.

@@ -6,46 +6,107 @@
 
 Use this path when the bug is classified as VISUAL in Step 2.
 
-### If Chrome Tools ARE Available
+Read **`references/playwright-headless.md`** first. Resolve `BRIDGE`, set `PW_STORAGE_STATE` /
+`PW_IGNORE_HTTPS_ERRORS` when the dispatch or user indicated login or HTTPS issues.
 
-1. **Navigate to the page** via `mcp__chrome-devtools-mcp__navigate_page` using the dev server URL
-   from the environment information collected in Step 3.
+Create evidence directory if needed:
 
-2. **Take screenshots** via `mcp__chrome-devtools-mcp__take_screenshot` to capture the current state
-   of the affected area.
+~~~bash
+mkdir -p defects/evidence
+~~~
 
-3. **Inspect computed CSS** via `mcp__chrome-devtools-mcp__evaluate_script`:
+Let **PAGE_URL** be the full URL from Step 3 (dev server or deployed). Retry failed bridge
+commands up to **2** times with a **3-second** delay.
+
+### If Playwright and `BRIDGE` are available
+
+1. **Login wall check** — `node "$BRIDGE" probe-login "<PAGE_URL>"`. If `behindLogin` is true
+   and `PW_STORAGE_STATE` is not set, tell the user that headless capture may only show the
+   login surface unless they provide a storage state file or unauthenticated repro URL.
+
+2. **Screenshot** — Capture current state (replace filename with something traceable, e.g.
+   slug of the route):
+
+~~~bash
+node "$BRIDGE" screenshot "<PAGE_URL>" "defects/evidence/visual-<short-label>.png" 1280 720
+~~~
+
+3. **Accessibility / structure snapshot** — `node "$BRIDGE" snapshot "<PAGE_URL>"` for a
+   structured tree (roles, names). Use it like a DOM-oriented map when interpreting layout
+   bugs.
+
+4. **Computed styles** — Use `run` with a small module under `defects/evidence/`. Replace
+   `SELECTOR` with a stable CSS selector for the affected element (from user description or
+   snapshot):
 
 ```javascript
-(() => {
-  const el = document.querySelector('SELECTOR');
-  if (!el) return { error: 'Element not found' };
-  const cs = getComputedStyle(el);
-  return {
-    color: cs.color, backgroundColor: cs.backgroundColor,
-    padding: cs.padding, margin: cs.margin,
-    fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily,
-    lineHeight: cs.lineHeight, borderRadius: cs.borderRadius,
-    boxShadow: cs.boxShadow, display: cs.display, position: cs.position
-  };
-})()
+// defects/evidence/computed-styles.mjs — set SELECTOR before running
+const SELECTOR = 'main .REPLACE_ME';
+
+export default async function (page) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return { error: 'Element not found', selector: sel };
+    const cs = getComputedStyle(el);
+    return {
+      selector: sel,
+      color: cs.color,
+      backgroundColor: cs.backgroundColor,
+      padding: cs.padding,
+      margin: cs.margin,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      fontFamily: cs.fontFamily,
+      lineHeight: cs.lineHeight,
+      borderRadius: cs.borderRadius,
+      boxShadow: cs.boxShadow,
+      display: cs.display,
+      position: cs.position,
+    };
+  }, SELECTOR);
+}
 ```
 
-4. **Read console errors** via `mcp__chrome-devtools-mcp__list_console_messages` to capture
-   any JavaScript errors or warnings related to the bug.
+~~~bash
+node "$BRIDGE" run "<PAGE_URL>" "defects/evidence/computed-styles.mjs"
+~~~
 
-5. **Check network requests** via `mcp__chrome-devtools-mcp__list_network_requests` to identify
-   failed API calls, missing assets, or CORS errors.
+5. **Console messages** — Collect JS errors/warnings after a reload (attach listener before
+   `reload`):
 
-6. **Inspect DOM structure** via `mcp__chrome-devtools-mcp__take_snapshot` to understand the
-   element hierarchy and identify missing or malformed elements.
+```javascript
+// defects/evidence/console-capture.mjs
+export default async function (page) {
+  const messages = [];
+  page.on('console', (msg) => {
+    try {
+      messages.push({ type: msg.type(), text: msg.text() });
+    } catch {
+      /* ignore */
+    }
+  });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 90_000 }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 1500));
+  return { consoleMessages: messages };
+}
+```
 
-Use findings from all six inspection steps to build reproduction steps and evidence.
+~~~bash
+node "$BRIDGE" run "<PAGE_URL>" "defects/evidence/console-capture.mjs"
+~~~
 
-### If Chrome Tools ARE NOT Available
+6. **Network** — `node "$BRIDGE" network "<PAGE_URL>"` for request URLs, methods, and
+   resource types (failed status codes are not always in this log; correlate with user
+   reports and server logs).
 
-Tell the user: "chrome-devtools-mcp tools are not available, so I cannot inspect the page
-directly. I will build the report from your description and any evidence you can provide."
+Use findings from these steps to build reproduction steps and evidence. Reference screenshot
+paths and JSON summaries in the report.
+
+### If Playwright or `BRIDGE` is NOT available
+
+Tell the user: "Headless Playwright is not available (or the bridge script was not found),
+so I cannot capture the page automatically. I will build the report from your description
+and any evidence you can provide."
 
 Then:
 

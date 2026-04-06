@@ -5,7 +5,7 @@ description: >
   or when reviewing components against requirements with visual output. Triggers on: component
   implementation complete, page complete, design review needed, visual quality gate, epic/milestone with UI work.
   Do NOT use for backend-only or CLI work with no visual output.
-tools: ["Read", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__resize_page", "mcp__chrome-devtools-mcp__take_snapshot"]
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: opus
 ---
 
@@ -27,8 +27,10 @@ The dispatching agent MUST provide:
 - Auth method (one of):
   - storageState path: path to Playwright auth state JSON file
   - Credentials: test username/password for login flow
-  - autoConnect: chrome-devtools-mcp autoConnect enabled with active logged-in session
   - None: pages under test do not require authentication
+
+Use **`PW_STORAGE_STATE`** (Playwright storageState JSON path) in the environment for
+headless authenticated pages when needed.
 
 The dispatching agent SHOULD provide (if known):
 - Requirements summary or issue/epic references (from Jira, GitHub, Linear — provide content, not file paths that may be stale)
@@ -46,11 +48,11 @@ Do NOT provide:
 
 ## How to Operate
 
-1. **Find and read the skill definition.** Use Glob to locate `**/visual-design/skills/design-reviewer/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` next to the skill for progress-log contracts.
+1. **Find and read the skill definition.** Use Glob to locate `**/visual-design/skills/design-reviewer/SKILL.md` and Read it in full. That file is your complete playbook — follow every step exactly as written. Read `references/agent-progress.md` and `references/playwright-headless.md`.
 
 2. **Initialize the progress log (mandatory for this agent).** Resolve `PROGRESS_LOG` from `progress_log_path` or default `.agent-progress/design-reviewer-$(date +%Y%m%d-%H%M%S).md`. Create parent directories; write header. Emit a short chat block per `references/agent-progress.md` (path + phase: initialized).
 
-3. **Run the skill's tool dependency checks yourself.** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all three tool checks from the skill: design-guidelines.md existence, chrome-devtools-mcp connection via `mcp__chrome-devtools-mcp__list_pages`, and previous review report scan. Follow the skill's STOP gates exactly. If Check 1 or Check 2 fails, return an error report immediately. On success, append `| parent | checks | complete` and emit a short chat progress block.
+3. **Run the skill's tool dependency checks yourself.** Append `| parent | checks | started` to `PROGRESS_LOG`; emit a short chat block. Execute all checks from the skill: design-guidelines.md, **Playwright + bridge + BASE_URL smoke**, and previous review report scan. Follow STOP gates exactly. If Check 1 or Check 2 fails, return an error report immediately. On success, append `| parent | checks | complete` and emit a short chat progress block.
 
 4. **Follow the skill's mode detection.** The skill has three modes (Mode A, Mode A-Diff, Mode B). Determine which mode applies from your dispatch prompt using the criteria the skill defines. Append `| parent | mode | [A|A-Diff|B]` to `PROGRESS_LOG`.
 
@@ -60,7 +62,7 @@ Do NOT provide:
 
    Read both phase files after reading the main SKILL.md.
 
-6. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E from `phases/mechanical-inspection.md` should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Bash", "Grep", "Glob", "mcp__chrome-devtools-mcp__list_pages", "mcp__chrome-devtools-mcp__navigate_page", "mcp__chrome-devtools-mcp__take_screenshot", "mcp__chrome-devtools-mcp__evaluate_script", "mcp__chrome-devtools-mcp__take_snapshot", "mcp__chrome-devtools-mcp__resize_page"]`. Pass the sub-agent:
+6. **Dispatch the mechanical inspection as a sub-agent.** Categories A-E from `phases/mechanical-inspection.md` should be dispatched to a sub-agent at `model: haiku` with tools `["Read", "Write", "Edit", "Bash", "Grep", "Glob"]`. Pass the sub-agent:
    - The full path to SKILL.md and `phases/mechanical-inspection.md`
    - The dev server URL (discovered or provided)
    - Which component(s) or page(s) to inspect
@@ -77,7 +79,7 @@ Do NOT provide:
    - Where the skill says "STOP" because a dependency is missing → return an error report immediately.
    - Where the skill says "tell the user and wait for guidance" → make your best judgment call and document it.
 
-8. **Run Category F (UX and Usability Review) yourself.** After the sub-agent returns raw findings from Categories A-E, append `| parent | ux | started` to `PROGRESS_LOG`, emit a short chat block, then run Category F from `phases/ux-heuristics.md`. Evaluate all 10 Nielsen's heuristics, score each 0-10, and compute the overall UX score — append per-heuristic lines to `PROGRESS_LOG` as defined in that phase. Use chrome-devtools-mcp tools to navigate, screenshot, and interact with the page directly. Append `| parent | ux | complete` when done.
+8. **Run Category F (UX and Usability Review) yourself.** After the sub-agent returns raw findings from Categories A-E, append `| parent | ux | started` to `PROGRESS_LOG`, emit a short chat block, then run Category F from `phases/ux-heuristics.md`. Evaluate all 10 Nielsen's heuristics, score each 0-10, and compute the overall UX score — append per-heuristic lines to `PROGRESS_LOG` as defined in that phase. Use **headless Playwright** (`playwright-skill-bridge.mjs` and `run` modules) to screenshot and interact. Append `| parent | ux | complete` when done.
 
 9. **Run diff mode if applicable.** If this is a follow-up review (Mode A-Diff), follow the diff mode section from `phases/ux-heuristics.md` to compare against the previous report and produce the diff table. Append `| parent | diff | complete` to `PROGRESS_LOG` when diff analysis is done.
 
@@ -99,9 +101,9 @@ If design-guidelines.md is missing:
 - Report: "No design-guidelines.md found. Run the visual-design-consultant skill first."
 - Stop immediately.
 
-If chrome-devtools-mcp is unavailable:
-- Report: "chrome-devtools-mcp is not available. This agent requires chrome-devtools-mcp for live browser inspection. Ensure Chrome is running with remote debugging enabled."
-- Stop immediately. Do NOT fall back to any other browser tool.
+If Playwright or the bridge script cannot run headless Chromium:
+- Report the error (install browsers: `npx playwright install chromium`, verify `BASE_URL`, `PW_STORAGE_STATE`).
+- Stop immediately.
 
 If the sub-agent fails or returns incomplete results:
 - Include whatever results were returned in the report.
@@ -120,5 +122,5 @@ If the sub-agent fails or returns incomplete results:
 9. Display the report from the skill to the end user when finished; include `PROGRESS_LOG` path.
 10. Always include Nielsen's Heuristic scores and overall UX score in the report.
 11. Retry failed MCP calls up to 2 times with a 3-second delay before escalating.
-12. chrome-devtools-mcp is the only supported browser tool. No fallbacks.
+12. Headless Playwright + bridge only — no Chrome DevTools MCP.
 13. Always initialize and update `PROGRESS_LOG` per "How to Operate."

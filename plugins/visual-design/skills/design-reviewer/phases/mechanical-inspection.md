@@ -2,12 +2,26 @@
 
 This phase covers the structured, automatable inspection categories. When running under
 the design-reviewer agent, this phase is dispatched to a haiku sub-agent. All browser
-interaction uses chrome-devtools-mcp.
+interaction uses **headless Playwright** via **`playwright-skill-bridge.mjs`** (ships with
+visual-design and functional-tester plugins). **No Chrome DevTools MCP** — CI-safe and
+AFK-safe.
+
+## Resolve `BRIDGE` and env
+
+~~~bash
+BRIDGE="$(find . -path "*/visual-design/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null)"
+test -n "$BRIDGE" || BRIDGE="$(find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit)"
+export PW_IGNORE_HTTPS_ERRORS=1
+# Optional: export PW_STORAGE_STATE=/path/to/storage.json
+~~~
+
+See `references/playwright-headless.md` in this skill for command summary (`snapshot`,
+`screenshot`, `network`, `run`).
 
 ## Reliability
 
-- **MCP retry:** If any `mcp__chrome-devtools-mcp__*` call fails, retry up to 2 times
-  with a 3-second delay before escalating the failure.
+- **Playwright retry:** If any bridge `node` command fails, retry up to 2 times with a
+  3-second delay before escalating.
 - **Bash timeout:** All bash commands must use a 30-second timeout
   (prefix with `timeout 30` or equivalent).
 
@@ -46,22 +60,22 @@ line items in the findings, tagged with `[checklist]`.
 Follow this order. Stop at the first successful match:
 
 1. **If the dispatch prompt specifies a URL** → use it directly. Verify with
-   `mcp__chrome-devtools-mcp__navigate_page`. Do NOT scan other ports.
+   `timeout 90 node "$BRIDGE" snapshot "<URL>"` (or `screenshot`) — expect non-empty tree or
+   image. Do NOT scan other ports.
 2. **If the dispatch prompt says servers are running** → verify the mentioned URL.
    Do NOT start a new server.
 3. **Detect a running dev server** on common ports (3000, 3001, 4173, 5173, 5174, 8080).
 4. **If a reverse proxy is in front** → use the proxy URL, not direct backend ports.
 5. If no server is found and no URL was provided → ask the user for the dev server URL.
 
-After discovering the server:
+After discovering **`PAGE_URL`**:
 
-1. Navigate to the page via `mcp__chrome-devtools-mcp__navigate_page`.
-2. Take a screenshot via `mcp__chrome-devtools-mcp__take_screenshot` to visually confirm
-   the component is present and rendered.
+1. Capture a headless screenshot:
+   `timeout 90 node "$BRIDGE" screenshot "$PAGE_URL" .agent-progress/design-review-load.png 1280 720`
+2. Read the image (Read tool) to visually confirm the component is present and rendered.
 
-**STOP gate:** Do not proceed until the component is visible in the browser. If the page
-is blank, shows an error, or the component cannot be found, tell the user and wait for
-guidance.
+**STOP gate:** Do not proceed until the component is visible. If the page is blank, shows
+an error, or the component cannot be found, tell the user and wait for guidance.
 
 #### Escalation Triggers (early exit)
 
@@ -70,9 +84,10 @@ These patterns indicate an environment issue, not a review issue. Escalate immed
 - **Page is blank or shows only a loading spinner after 5 seconds** → SPA hydration issue
   or wrong URL. Escalate: "Page at [URL] shows [blank/spinner]. Possible causes: SPA not
   hydrated, wrong route, build not complete."
-- **chrome-devtools-mcp returns errors on all navigation attempts** → connection issue.
-  Escalate: "chrome-devtools-mcp returning errors on navigation. Check that Chrome is
-  running with remote debugging enabled and chrome-devtools-mcp is connected."
+- **Playwright bridge fails on all navigation attempts** (timeout, net::ERR, browser not
+  installed) → environment issue. Escalate: "Headless Playwright cannot load [URL]. Run
+  `npx playwright install chromium`, verify BASE_URL, and set `PW_STORAGE_STATE` if auth
+  is required."
 - **design-guidelines.md exists but contains no tokens** → file is a stub. Escalate:
   "design-guidelines.md found but contains no usable design tokens. Run the
   visual-design-consultant skill first to populate it."
@@ -83,107 +98,58 @@ Run all five inspection categories against each component under review.
 
 #### Category A: Visual Appearance
 
-1. Take a screenshot of the component in its default state via
-   `mcp__chrome-devtools-mcp__take_screenshot`.
-2. Use `mcp__chrome-devtools-mcp__evaluate_script` to dispatch a mouseover event on the
-   component, then take a screenshot of the hover state.
-3. Use `mcp__chrome-devtools-mcp__evaluate_script` to dispatch a focus event on the
-   component, then take a screenshot of the focus state.
-4. Repeat for active and disabled states if the component spec defines them.
-5. Visually compare each captured state against the component spec.
+Use **`node "$BRIDGE" run "$PAGE_URL" ./tmp-cat-a.mjs`** (write the module per step). The
+default export receives `page` already on `PAGE_URL`.
+
+1. Default state: `await page.screenshot({ path: '.agent-progress/cat-a-default.png' })`.
+2. Hover: `await page.hover(selector)` then screenshot to `.agent-progress/cat-a-hover.png`.
+3. Focus: `await page.focus(selector)` then screenshot to `.agent-progress/cat-a-focus.png`.
+4. Repeat for active/disabled if the spec defines them (use `run` sequences or keyboard
+   modifiers as needed).
+5. Read each PNG and compare against the component spec.
 6. Flag missing interactive states (defined in spec but not implemented) as **BLOCKING**.
 
 #### Category B: CSS/Token Compliance
 
-1. Read the script at `scripts/read-computed-styles.js` and inject it via
-   `mcp__chrome-devtools-mcp__evaluate_script`, substituting the target selector for
-   `'SELECTOR'`. For example, to inspect `.card-header`:
-
-~~~javascript
-// read-computed-styles.js with selector substituted — see scripts/read-computed-styles.js
-~~~
-
-2. Compare returned values against the token tables in `design-guidelines.md`.
-3. For hover/focus states: trigger the state first via
-   `mcp__chrome-devtools-mcp__evaluate_script` (dispatch the event), then re-run the
-   extraction script.
-4. Flag token violations as **BLOCKING**.
+1. Read `scripts/read-computed-styles.js`. Build a **`run` module** that substitutes the
+   real selector for `'SELECTOR'`, then `return await page.evaluate(() => { ... })` with
+   that file's IIFE body (browser context), or pass the selector as an argument via
+   `page.evaluate(([sel]) => { ... }, [selector])`.
+2. Execute: `timeout 90 node "$BRIDGE" run "$PAGE_URL" ./tmp-computed.mjs` and parse JSON
+   stdout.
+3. Compare returned values against the token tables in `design-guidelines.md`.
+4. For hover/focus states: extend the module — `hover`/`focus` the node, then re-run the
+   computed-style evaluation.
+5. Flag token violations as **BLOCKING**.
 
 #### Category C: Accessibility
 
-1. Use `mcp__chrome-devtools-mcp__evaluate_script` to inject axe-core from CDN:
+1. **Preferred:** If `@axe-core/playwright` is in `package.json`, add a one-off test file
+   under the project's test directory that navigates to `PAGE_URL`, runs `AxeBuilder`, and
+   `console.log(JSON.stringify(results))`; execute with
+   `timeout 120 npx playwright test path/to/tmp-axe.spec.ts --reporter=line`.
 
-~~~javascript
-(() => {
-  if (window.axe) return 'already loaded';
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
-    s.onload = () => resolve('loaded');
-    s.onerror = () => reject('CDN blocked');
-    document.head.appendChild(s);
-  });
-})()
-~~~
+2. **Otherwise:** Use **`node "$BRIDGE" run "$PAGE_URL" ./tmp-axe-cdn.mjs`**. The module
+   should `addScriptTag` the axe CDN, `waitForFunction(() => window.axe)`, then
+   `page.evaluate` an async `axe.run(document.querySelector('SELECTOR') || document, {
+   runOnly: ['wcag2a','wcag2aa'] })` and return `{ violations, passes }` trimmed for size.
 
-2. Run the accessibility scan:
+3. If CDN is blocked: `npm install -D axe-core` and load `axe.min.js` via
+   `addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })` inside the same module.
 
-~~~javascript
-axe.run(document.querySelector('SELECTOR') || document, {
-  runOnly: ['wcag2a', 'wcag2aa']
-}).then(r => ({
-  violations: r.violations.map(v => ({
-    id: v.id, impact: v.impact, description: v.description,
-    nodes: v.nodes.slice(0, 5).map(n => ({ html: n.html.slice(0, 200), target: n.target }))
-  })),
-  passes: r.passes.length
-}))
-~~~
-
-3. If CDN injection fails: auto-install axe-core from npm and load locally:
-
-~~~bash
-timeout 30 npm install -D axe-core
-~~~
-
-   Then read the axe-core source and inject it inline:
-
-   - Use the Read tool to read `node_modules/axe-core/axe.min.js`
-   - Use `mcp__chrome-devtools-mcp__evaluate_script` to inject the contents directly:
-
-~~~javascript
-(() => {
-  if (window.axe) return 'already loaded';
-  // [paste axe.min.js contents here — the Read tool output]
-  return 'loaded from local install';
-})()
-~~~
-
-   If npm install also fails: **STOP.** Present alternatives:
-   - "axe-core could not be loaded from CDN or installed via npm."
-   - "1. Allow CDN access to cdnjs.cloudflare.com and retry."
-   - "2. Install manually: `npm install -D axe-core` and retry."
-   - "3. Skip accessibility scan (NOT recommended — accessibility is a core quality requirement)."
-   - Do NOT proceed without the user's decision.
-
-4. **Alternative:** If Playwright is available in the project, `@axe-core/playwright` can
-   be used as an alternative to CDN injection. Check for `@axe-core/playwright` in
-   `package.json` before attempting CDN injection. If present, note it in the report as an
-   available alternative but still proceed with the CDN approach for live browser review.
+4. If all axe loading fails: **STOP** and present the same alternatives as before (CDN,
+   npm install, or explicit user opt-out — accessibility remains a core bar).
 
 5. Flag all WCAG AA violations as **BLOCKING**.
 
 #### Category D: Motion Verification
 
-1. Read the script at `scripts/read-motion-properties.js` and inject it via
-   `mcp__chrome-devtools-mcp__evaluate_script`, substituting the target selector for
-   `'SELECTOR'`.
-
+1. Read `scripts/read-motion-properties.js` and execute it in-page via a **`run` module**
+   (`page.evaluate` with the substituted selector), same pattern as Category B.
 2. Compare returned values against the Motion System tokens and Custom Motion Catalog
    from `design-guidelines.md`.
 3. Use Grep on source files for `prefers-reduced-motion` support.
-4. Take screenshots before and after triggering animations via
-   `mcp__chrome-devtools-mcp__take_screenshot` for visual review.
+4. Take screenshots before/after animation triggers inside the `run` module (`page.screenshot`).
 5. Flag animation/transition values that contradict motion tokens as **BLOCKING**.
 6. Flag missing `prefers-reduced-motion` support on any animated element as **BLOCKING**.
 
@@ -191,15 +157,12 @@ timeout 30 npm install -D axe-core
 
 1. Read the Responsive System section from `design-guidelines.md` to determine breakpoints
    or fluid scale definitions.
-2. Use `mcp__chrome-devtools-mcp__resize_page` to test at viewports:
-   375, 768, 1024, 1440 (or use breakpoints from the guidelines if defined).
-3. At each viewport:
-   - Take a screenshot via `mcp__chrome-devtools-mcp__take_screenshot`.
-   - Re-run the computed style extraction from Category B.
-   - Run the overflow and touch-target check via
-     `mcp__chrome-devtools-mcp__evaluate_script`:
+2. Use a **`run` module** that loops viewports `375, 768, 1024, 1440` (or guideline
+   breakpoints): for each, `await page.setViewportSize({ width, height })`, screenshot,
+   re-run Category B extraction, and `page.evaluate` the overflow/touch-target script:
 
 ~~~javascript
+// Inside page.evaluate after sizing:
 (() => {
   const vw = window.innerWidth;
   const issues = [];
@@ -216,11 +179,11 @@ timeout 30 npm install -D axe-core
 })()
 ~~~
 
-4. **ALWAYS** restore the browser viewport to 1280px when responsive testing is complete:
-   use `mcp__chrome-devtools-mcp__resize_page` to set width back to 1280.
-5. Flag horizontal overflow as **BLOCKING**.
-6. Flag touch targets below 44x44px at mobile viewports as **BLOCKING**.
-7. Flag unreadable content (overlapping text, truncation without ellipsis) as **BLOCKING**.
+3. **ALWAYS** end the module with `setViewportSize({ width: 1280, height: 720 })` (desktop
+   baseline for downstream Category F).
+4. Flag horizontal overflow as **BLOCKING**.
+5. Flag touch targets below 44x44px at mobile viewports as **BLOCKING**.
+6. Flag unreadable content (overlapping text, truncation without ellipsis) as **BLOCKING**.
 
 ---
 
@@ -243,9 +206,9 @@ Same as Mode A Step 1, but for ALL components identified in the requirements:
 ### Step 3: Locate in Browser
 
 1. Same dev server discovery as Mode A Step 2 — ask the user or detect on common ports.
-2. Navigate to the first page or component via `mcp__chrome-devtools-mcp__navigate_page`.
-3. Take a screenshot via `mcp__chrome-devtools-mcp__take_screenshot` to confirm the page
-   has loaded.
+2. Load the first page headlessly:
+   `timeout 90 node "$BRIDGE" screenshot "$PAGE_URL" .agent-progress/mode-b-load.png 1280 720`
+3. Read the PNG to confirm the page has loaded.
 
 **STOP gate:** Do not proceed if the dev server is unreachable or the page fails to load.
 
@@ -253,8 +216,8 @@ Same as Mode A Step 1, but for ALL components identified in the requirements:
 
 For each visual requirement extracted in Step 1:
 
-1. Navigate to the relevant page or component in the browser using
-   `mcp__chrome-devtools-mcp__navigate_page`.
+1. Set `PAGE_URL` for the requirement under test and use the same headless bridge
+   commands (`screenshot`, `snapshot`, `run`) as Mode A.
 2. Run the full 5-category inspection (same as Mode A Step 3: Visual Appearance,
    CSS/Token Compliance, Accessibility, Motion Verification, Responsive Behavior).
 3. If blocking issues are found: report them with specific fix suggestions (code-level

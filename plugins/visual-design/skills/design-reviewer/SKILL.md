@@ -8,19 +8,20 @@ description: >
   system", "visual review", "run design tests", "implement epic", "implement milestone",
   "implement feature", "perform a design review of [requirements]".
   Do NOT trigger for backend-only, API-only, or CLI work with no visual output.
-  Uses chrome-devtools-mcp for live browser inspection. Includes Nielsen's 10 Usability
-  Heuristics framework with UX scoring (0-100) and diff mode for follow-up reviews.
+  Uses **headless Playwright** (`playwright-skill-bridge.mjs`) for inspection — AFK-safe and
+  CI-safe; no Chrome DevTools MCP. Includes Nielsen's 10 Usability Heuristics with UX
+  scoring (0-100) and diff mode for follow-up reviews.
   When dispatched as the design-reviewer agent, writes granular progress to `.agent-progress/`
   (see `references/agent-progress.md`) and emits short parent summaries for orchestrators.
-version: 4.0.8
+version: 4.1.0
 ---
 
 # Design Reviewer
 
 Senior creative director and UI/UX usability expert quality gate. Verify that implemented
 components match the project's design system, look visually appealing, deliver excellent
-usability on both desktop and mobile, and meet accessibility standards using live browser
-inspection via chrome-devtools-mcp.
+usability on both desktop and mobile, and meet accessibility standards using **headless
+Playwright** (see `references/playwright-headless.md`).
 
 ## Agent progress log (orchestrator visibility)
 
@@ -42,17 +43,37 @@ timeout 30 bash -c 'test -f design-guidelines.md && echo "FOUND" || echo "MISSIN
 If MISSING: **STOP.** Tell the user: "No design-guidelines.md found. Run the
 visual-design-consultant skill first to establish a design system."
 
-### Check 2: chrome-devtools-mcp Connection
+### Check 2: Playwright + headless bridge + dev server URL
 
-Call `mcp__chrome-devtools-mcp__list_pages` to verify the chrome-devtools-mcp connection
-is active and at least one browser page is available.
+1. **Playwright CLI**
 
-If the call fails or returns an error: **STOP.** Tell the user:
-- "chrome-devtools-mcp is not available. This skill requires chrome-devtools-mcp for live browser inspection."
-- "To set up: ensure chrome-devtools-mcp is installed and Chrome is running with remote debugging enabled."
-- "Once enabled, say 'retry' and I will check again."
+~~~bash
+timeout 30 npx playwright --version 2>/dev/null || echo "MISSING"
+~~~
 
-Do NOT fall back to any other browser tool. chrome-devtools-mcp is required.
+If MISSING: auto-install per functional-tester Step 1 (`npm init playwright@latest`, `npx playwright install chromium`) or **STOP** with install instructions.
+
+2. **Resolve `BRIDGE`** (see `references/playwright-headless.md`):
+
+~~~bash
+BRIDGE="$(find . -path "*/visual-design/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null)"
+test -n "$BRIDGE" || BRIDGE="$(find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit)"
+~~~
+
+If `BRIDGE` is empty: **STOP** — plugin scripts missing.
+
+3. **Discover `BASE_URL`** (dispatch URL first, else curl ports 3000, 3001, 4173, 5173, 5174, 8080 — same priority as functional-tester Check 2). Without a reachable URL: **STOP.**
+
+4. **Headless smoke test**
+
+~~~bash
+mkdir -p .agent-progress
+export PW_IGNORE_HTTPS_ERRORS=1
+# Optional: export PW_STORAGE_STATE=/path/to/storage.json
+timeout 90 node "$BRIDGE" snapshot "$BASE_URL"
+~~~
+
+If this fails: **STOP.** Typical fixes: `npx playwright install chromium`, correct `BASE_URL`, valid `PW_STORAGE_STATE` for auth.
 
 ### Check 3: Previous Review Report (for diff mode)
 
@@ -106,6 +127,8 @@ After tool checks pass, determine which review mode to use:
 ## Phase Loading
 
 This skill is split into phase files for maintainability. Load phases as needed:
+
+- **`references/playwright-headless.md`** — bridge commands, env vars, auth.
 
 - **Categories A-E (Mechanical Inspection):** Read `phases/mechanical-inspection.md` and
   follow it for the structured inspection categories (Visual Appearance, CSS/Token
@@ -231,8 +254,8 @@ Delta: +/-XX
 ## Hard Rules
 
 1. **NEVER skip tool checks.** Checks 1 and 2 must pass before any work begins.
-2. **NEVER silently degrade.** chrome-devtools-mcp unavailable or axe CDN blocked = STOP, present options, wait for user decision.
-3. **NEVER fall back to alternative browser tools.** chrome-devtools-mcp is the only supported browser inspection tool.
+2. **NEVER silently degrade.** Playwright/bridge failures or axe CDN blocked = STOP, present options, wait for user decision.
+3. **Headless only.** Use Playwright + bridge — do not require Chrome DevTools MCP or a GUI browser.
 4. **NEVER pass a component with blocking issues.** Report all blocking issues with fix suggestions.
 5. **ALWAYS run the axe accessibility scan.** Accessibility is not optional.
 6. **ALWAYS offer rollback** if partial work was done before a tool was found missing.
@@ -242,7 +265,7 @@ Delta: +/-XX
 10. **ALWAYS classify fix suggestions** as "safe fix" (code-level, no UX impact) or "design/UX change needed" (directive-level, requires design decisions).
 11. **ALWAYS include Nielsen's Heuristic scores** in the report for Category F.
 12. **ALWAYS tag behavior-changing recommendations** with **FUNCTIONAL / BEHAVIOR CHANGE — ESCALATE BEFORE FIX** when implementation would alter how the product works for users (not merely how it looks). The caller MUST escalate those items to the end user before any fix — BLOCKING severity does not override this.
-13. **Retry MCP calls** up to 2 times with a 3-second delay before escalating.
+13. **Retry** failed bridge / Playwright commands up to 2 times with a 3-second delay.
 14. **Timeout all bash commands** at 30 seconds.
 15. **Agent runs:** If `progress_log_path` is set or running under the design-reviewer agent,
     follow **`references/agent-progress.md`**; pass the same `PROGRESS_LOG` path to the haiku

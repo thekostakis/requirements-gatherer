@@ -39,6 +39,9 @@ printf '\n### %s | %s | %s\n- %s\n' "$(date -Iseconds 2>/dev/null || date)" "sub
 On Windows without GNU `date`, use Git Bash/WSL for these commands, or equivalent
 `Add-Content` in PowerShell with the same four logical fields.
 
+If a **Playwright bridge** (`node …/playwright-skill-bridge.mjs`) command fails, apply the
+same retry policy (2 retries, 3s delay) before escalating.
+
 ## Minimum append points (haiku / `tdd-loop.md`)
 
 - After **Step 2** per page: URL, render OK or blocked.

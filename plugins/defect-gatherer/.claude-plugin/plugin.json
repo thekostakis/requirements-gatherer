@@ -1,11 +1,11 @@
 {
   "name": "defect-gatherer",
-  "version": "1.2.2",
-  "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+  "version": "1.2.3",
+  "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via headless Playwright (visual bugs; plugin bridge script, CI-safe) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["defect", "bug", "issue", "QA", "testing", "story-update", "change-request", "feature-request", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "chrome-devtools-mcp", "dispatch-contract"]
+  "keywords": ["defect", "bug", "issue", "QA", "testing", "story-update", "change-request", "feature-request", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "playwright", "headless", "dispatch-contract"]
 }

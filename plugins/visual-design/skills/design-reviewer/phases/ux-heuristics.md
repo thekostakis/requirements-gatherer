@@ -3,7 +3,9 @@
 This phase covers the creative director and UX expert evaluation layer. It goes beyond
 tokens and checklists to evaluate the actual user experience using Nielsen's 10 Usability
 Heuristics as a structured framework. When running under the design-reviewer agent, the
-opus parent handles this phase directly. All browser interaction uses chrome-devtools-mcp.
+opus parent handles this phase directly. All browser interaction uses **headless Playwright**
+via **`playwright-skill-bridge.mjs`** (`snapshot`, `screenshot`, `run`) — same stack as
+mechanical inspection.
 
 ## Functional vs cosmetic (caller escalation)
 
@@ -16,8 +18,8 @@ Examples that are **functional** (escalate): adding a confirmation dialog, movin
 
 ## Reliability
 
-- **MCP retry:** If any `mcp__chrome-devtools-mcp__*` call fails, retry up to 2 times
-  with a 3-second delay before escalating the failure.
+- **Playwright retry:** If any bridge `node` command fails, retry up to 2 times with a
+  3-second delay before escalating.
 - **Bash timeout:** All bash commands must use a 30-second timeout.
 
 ## Progress log (opus parent, Category F)
@@ -29,9 +31,9 @@ If **`PROGRESS_LOG`** is set, append Category F lines per **`references/agent-pr
 
 ## Category F: UX and Usability Review
 
-Run at both desktop (1280px) and mobile (375px) viewports. Use
-`mcp__chrome-devtools-mcp__resize_page` to switch viewports and
-`mcp__chrome-devtools-mcp__take_screenshot` to capture state at each viewport.
+Run at both desktop (1280px) and mobile (375px) viewports. Use a **`run` module** with
+`page.setViewportSize` to switch sizes and `page.screenshot` (or the `screenshot` bridge
+command with width/height args) to capture state at each viewport.
 
 ### Nielsen's Heuristic Framework
 
@@ -45,7 +47,7 @@ Does the system inform users about what's happening through timely feedback?
 
 - Check: loading states, progress indicators, form submission feedback, active navigation state
 - Test at both desktop (1280px) and mobile (375px)
-- Screenshot current state after common actions via `mcp__chrome-devtools-mcp__take_screenshot`
+- Screenshot current state after common actions via headless `screenshot` or `run` module
 - Flag missing loading indicators for async operations as **BLOCKING**
 - Flag missing active/selected state on navigation as **LOW**
 
@@ -55,7 +57,7 @@ Does the system use familiar language, concepts, and conventions?
 
 - Check: terminology, iconography, metaphors, logical information ordering
 - Flag jargon or technical language in user-facing text
-- Use `mcp__chrome-devtools-mcp__take_snapshot` to read page text content
+- Use `node "$BRIDGE" snapshot "$PAGE_URL"` (or `innerText` via `run` + `page.evaluate`) to read page text
 - Flag developer-facing terms exposed to end users as **LOW**
 - Flag confusing or misleading iconography as **BLOCKING**
 
@@ -85,7 +87,7 @@ Does the system prevent errors before they occur?
 - Check: form validation (inline vs on-submit), disabled states for invalid actions, confirmation dialogs
 - Flag forms that only validate on submit as **LOW**
 - Flag destructive actions without confirmation dialog as **BLOCKING**
-- Use `mcp__chrome-devtools-mcp__evaluate_script` to test form validation behavior
+- Use a `run` module with `page.evaluate` / locator fills to test form validation behavior
 
 #### H6: Recognition Rather Than Recall
 
@@ -198,10 +200,9 @@ inconsistencies across breakpoints as **BLOCKING**.
 ### Interaction Feedback → H1
 
 Check that interactive elements provide clear feedback: hover states on desktop, press
-states on mobile, loading states for async actions, error states for forms. Use
-`mcp__chrome-devtools-mcp__evaluate_script` to trigger interactions and
-`mcp__chrome-devtools-mcp__take_screenshot` to capture the feedback. Flag silent
-interactions (click produces no visible change) as **BLOCKING**.
+states on mobile, loading states for async actions, error states for forms. Use a **`run`**
+module (`page.hover`, `page.click`, `page.screenshot`) to trigger interactions and capture
+feedback. Flag silent interactions (click produces no visible change) as **BLOCKING**.
 
 ### Content Readability → H8
 

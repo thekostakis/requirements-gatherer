@@ -16,6 +16,8 @@ points (Steps 2–5). Tag lines `| sub | tdd | ...`.
 
 ## Step 2: Identify What to Test
 
+Resolve **`BRIDGE`** once per session: `references/playwright-headless.md`.
+
 1. From the conversation context, determine which page(s), route(s), or visual flow(s)
    were just implemented or are being requested for testing.
 2. Read relevant requirements files to understand expected behavior:
@@ -23,12 +25,15 @@ points (Steps 2–5). Tag lines `| sub | tdd | ...`.
    - `requirements-addendum-*.md`
    - Epic or issue descriptions referenced in conversation
    - Any route definitions or page component files
-3. Navigate to the page in the browser using `mcp__chrome-devtools-mcp__navigate_page`
-   with the dev server URL discovered in Step 1.
-4. Take a screenshot via `mcp__chrome-devtools-mcp__take_screenshot` to confirm the page
-   renders correctly.
+3. Navigate headlessly and capture proof of render:
 
-If an MCP call fails, retry up to 2 times with a 3-second delay before escalating.
+~~~bash
+export PW_IGNORE_HTTPS_ERRORS=1
+# Optional: export PW_STORAGE_STATE=... when the page requires auth
+timeout 90 node "$BRIDGE" screenshot "<PAGE_URL>" .agent-progress/tdd-smoke.png 1280 720
+~~~
+
+4. If the screenshot step fails, retry up to 2 times with a 3-second delay, then escalate.
 
 **STOP gate:** If the page does not render (blank page, error screen, 404), tell the
 user and wait for guidance. Do not proceed until the page is visually confirmed.
@@ -37,9 +42,14 @@ user and wait for guidance. Do not proceed until the page is visually confirmed.
 
 ## Step 3: Discover Testable Behaviors
 
-1. Use `mcp__chrome-devtools-mcp__take_snapshot` to get the accessibility tree of the
-   page. This returns the full accessibility structure including roles, names, values,
-   and states for all elements.
+1. Capture the accessibility tree via the bridge (same as Playwright
+   `page.accessibility.snapshot()`):
+
+~~~bash
+timeout 90 node "$BRIDGE" snapshot "<PAGE_URL>" > .agent-progress/a11y-snapshot.json
+~~~
+
+Read the JSON and parse the tree: roles, names, values, and states for all elements.
 
 2. From the accessibility tree, build a structured inventory of testable elements:
 
@@ -55,27 +65,35 @@ user and wait for guidance. Do not proceed until the page is visually confirmed.
    same information through the lens of how users actually interact with the page.
 
 3. If the accessibility tree is insufficient (e.g., custom elements with no ARIA), use
-   `mcp__chrome-devtools-mcp__evaluate_script` as a supplement:
+   `node "$BRIDGE" run "<PAGE_URL>" ./tmp-inventory.mjs`. Example module body:
 
 ~~~javascript
-(() => {
-  const inventory = {
-    forms: [...document.querySelectorAll('form')].map(f => ({
-      id: f.id, action: f.action,
-      fields: [...f.querySelectorAll('input,select,textarea')].map(i => ({
-        type: i.type, name: i.name, placeholder: i.placeholder,
+// tmp-inventory.mjs
+export default async (page) =>
+  page.evaluate(() => ({
+    forms: [...document.querySelectorAll('form')].map((f) => ({
+      id: f.id,
+      action: f.action,
+      fields: [...f.querySelectorAll('input,select,textarea')].map((i) => ({
+        type: i.type,
+        name: i.name,
+        placeholder: i.placeholder,
         ariaLabel: i.getAttribute('aria-label'),
-        label: i.labels?.[0]?.textContent?.trim()
-      }))
+        label: i.labels?.[0]?.textContent?.trim(),
+      })),
     })),
-    customInteractive: [...document.querySelectorAll('[onclick],[data-action]')].map(el => ({
-      tag: el.tagName, role: el.getAttribute('role'), id: el.id,
-      ariaLabel: el.getAttribute('aria-label')
-    }))
-  };
-  return inventory;
-})()
+    customInteractive: [...document.querySelectorAll('[onclick],[data-action]')].map(
+      (el) => ({
+        tag: el.tagName,
+        role: el.getAttribute('role'),
+        id: el.id,
+        ariaLabel: el.getAttribute('aria-label'),
+      }),
+    ),
+  }));
 ~~~
+
+Write the file, run the bridge, parse stdout JSON.
 
 4. Cross-reference the element inventory with the requirements to identify key user flows.
 5. Present the test plan to the user:
@@ -402,7 +420,7 @@ bug. Stop immediately and escalate to the user or orchestrator — do not attemp
 - **Server returns 404/500 for all routes** → wrong server, wrong port, or app not built.
   Report: "Server at [URL] returns [status] for all tested routes."
 
-- **Cannot determine page structure** (`take_snapshot` returns empty or minimal tree) →
+- **Cannot determine page structure** (snapshot JSON empty or minimal tree) →
   page may need JS hydration time, may be behind auth, or may be a SPA that hasn't loaded.
   Try waiting 3 seconds and re-reading. If still empty after retry, escalate: "Page
   accessibility tree is empty or minimal after retry. Possible causes: SPA not hydrated,

@@ -1,11 +1,11 @@
 {
   "name": "functional-tester",
-  "version": "2.1.1",
-  "description": "Playwright functional test generator with full-stack performance analysis. Uses chrome-devtools-mcp for live browser inspection, Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot, and Lighthouse CI with budget assertions. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse and @axe-core/playwright for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level) and functional/behavior-change escalation before implementing product-affecting fixes. Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch; agent runs append granular progress to .agent-progress/ (optional progress_log_path).",
+  "version": "2.2.0",
+  "description": "Playwright functional test generator with full-stack performance analysis. Headless Playwright only (playwright-skill-bridge.mjs + test suite) — CI-safe, AFK-safe, no Chrome DevTools MCP. Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for WCAG audits, visual regression via toHaveScreenshot, Lighthouse CLI / Lighthouse CI for performance and audit scores. TDD-style fix loop, then Lighthouse + axe + performance deep-dive (report-only with escalation tags). Opus agent with haiku TDD sub-agent; .agent-progress/ logs (optional progress_log_path).",
   "author": {
     "name": "Chris Kostakis"
   },
   "repository": "https://github.com/thekostakis/requirements-gatherer",
   "license": "MIT",
-  "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "axe", "axe-core-playwright", "wcag", "accessibility", "performance", "seo", "visual-regression", "chrome-devtools-mcp", "testing", "agent"]
+  "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "lighthouse-ci", "headless", "axe", "axe-core-playwright", "wcag", "accessibility", "performance", "seo", "visual-regression", "testing", "agent", "ci"]
 }

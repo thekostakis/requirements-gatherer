@@ -23,40 +23,40 @@
     {
       "name": "visual-design",
       "source": "./plugins/visual-design",
-      "description": "Visual design system toolkit with UX/usability expert review. Consultant skill for establishing design systems via interview or site extraction with page discovery, parallel fingerprinting, fluid responsive detection, and custom component motion discovery; codebase reverse-engineering mode derives tokens and component specs from the repo with chrome-devtools-mcp route inspection (spec at docs/design-system/codebase-reverse-spec-*.md, section-by-section approval, per-file delete confirmation). Component-context skill plus opus component-context agent: minimal one spec + motion when exact or high-confidence fuzzy; auto top-3 specs + synthesis + motion when ambiguous; gap inference otherwise. Design-reviewer skill and agent for live visual quality gate testing via chrome-devtools-mcp — includes Nielsen's 10 Usability Heuristics framework with UX scoring (0-100), diff mode for follow-up reviews, consultant synergy (review-checklist.md), functional/behavior-change escalation tags on fix suggestions, and Categories A-F split into phase files. Fully report-only with categorized fix suggestions. Uses opus agent with haiku sub-agent for cost-efficient mechanical inspection dispatch; agent runs write append-only progress logs under .agent-progress/ (optional progress_log_path in dispatch). Update-component-index skill for regenerating the component compendium index.",
-      "version": "4.0.8",
+      "description": "Visual design system toolkit with UX/usability expert review. Consultant + codebase reverse-engineering (chrome-devtools-mcp for route inspection per those skills). Component-context agent. Design-reviewer: headless Playwright bridge (CI-safe), Nielsen heuristics, diff mode, review-checklist synergy, .agent-progress/ logs. Update-component-index skill.",
+      "version": "4.1.0",
       "author": {
         "name": "Chris Kostakis"
       },
       "repository": "https://github.com/thekostakis/requirements-gatherer",
       "license": "MIT",
-      "keywords": ["design-system", "visual-design", "chrome-devtools-mcp", "accessibility", "axe", "design-tokens", "components", "component-context", "responsive", "motion", "animations", "agent", "nielsen-heuristics", "ux-scoring", "diff-mode"],
+      "keywords": ["design-system", "visual-design", "chrome-devtools-mcp", "playwright", "headless", "accessibility", "axe", "design-tokens", "components", "component-context", "responsive", "motion", "animations", "agent", "nielsen-heuristics", "ux-scoring", "diff-mode", "ci"],
       "category": "design"
     },
     {
       "name": "functional-tester",
       "source": "./plugins/functional-tester",
-      "description": "Playwright functional test generator with full-stack performance analysis. Uses chrome-devtools-mcp for live browser inspection, Playwright AI agents (Planner, Generator, Healer) for resilient test authoring, accessibility-tree selectors, @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot, and Lighthouse CI with budget assertions. Writes end-to-end tests via a TDD-style fix loop, then audits pages with Lighthouse and @axe-core/playwright for accessibility, performance, and SEO. Includes tech-stack-aware performance deep-dive: network waterfall analysis, API trace-back to backend code, and database query analysis. Lighthouse/axe/performance sections are report-only with categorized fix suggestions (code-level and directive-level) and functional/behavior-change escalation before implementing product-affecting fixes. Uses opus agent with haiku sub-agent for cost-efficient TDD loop dispatch; agent runs write append-only progress logs under .agent-progress/ (optional progress_log_path in dispatch).",
-      "version": "2.1.1",
+      "description": "Playwright functional tests + headless bridge + Lighthouse CLI/CI + axe. No Chrome DevTools MCP. TDD loop (haiku), audits and performance deep-dive (opus, report-only). .agent-progress/ optional progress_log_path.",
+      "version": "2.2.0",
       "author": {
         "name": "Chris Kostakis"
       },
       "repository": "https://github.com/thekostakis/requirements-gatherer",
       "license": "MIT",
-      "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "axe", "axe-core-playwright", "wcag", "accessibility", "performance", "seo", "visual-regression", "chrome-devtools-mcp", "testing", "agent"],
+      "keywords": ["playwright", "e2e", "functional-tests", "lighthouse", "lighthouse-ci", "headless", "axe", "axe-core-playwright", "wcag", "accessibility", "performance", "seo", "visual-regression", "testing", "agent", "ci"],
       "category": "testing"
     },
     {
       "name": "defect-gatherer",
       "source": "./plugins/defect-gatherer",
-      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via chrome-devtools-mcp (visual bugs) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Broad trigger coverage: bugs/issues/problems/regressions, change and story updates, and concrete feature requests against existing product (not greenfield requirements). Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
-      "version": "1.2.2",
+      "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via headless Playwright (visual bugs; plugin bridge, CI-safe) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Broad trigger coverage: bugs/issues/problems/regressions, change and story updates, and concrete feature requests against existing product (not greenfield requirements). Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+      "version": "1.2.3",
       "author": {
         "name": "Chris Kostakis"
       },
       "repository": "https://github.com/thekostakis/requirements-gatherer",
       "license": "MIT",
-      "keywords": ["defect", "bug", "issue", "problem", "regression", "story-update", "change-request", "feature-request", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "chrome-devtools-mcp", "dispatch-contract"],
+      "keywords": ["defect", "bug", "issue", "problem", "regression", "story-update", "change-request", "feature-request", "QA", "testing", "issue-tracking", "github", "jira", "linear", "gitlab", "requirements-traceability", "playwright", "headless", "dispatch-contract"],
       "category": "quality"
     }
   ]

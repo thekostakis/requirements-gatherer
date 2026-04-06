@@ -36,6 +36,9 @@ printf '\n### %s | %s | %s\n- %s\n' "$(date -Iseconds 2>/dev/null || date)" "sub
 On Windows, prefer Git Bash/WSL for `printf`/`date`, or mirror fields with PowerShell
 `Add-Content`.
 
+**Playwright bridge:** retry failed `node …/playwright-skill-bridge.mjs` calls up to 2 times
+with a 3-second delay (same as phase reliability rules).
+
 ## Minimum append points (haiku / mechanical)
 
 After **each** of Categories **A–E** for each page/component under review: one block with

@@ -7,14 +7,15 @@ description: >
   fires after implementation steps complete when the work involves a testable page or
   visual flow — similar to how superpowers:code-reviewer fires after major steps.
   Do NOT trigger for individual component work (that's the design-reviewer's job) or
-  for non-visual/backend-only code. Uses chrome-devtools-mcp for live browser inspection,
-  Playwright AI agents (Planner, Generator, Healer) for resilient test authoring,
-  @axe-core/playwright for integrated WCAG audits, visual regression via toHaveScreenshot,
-  and Lighthouse CI with budget assertions.
+  for non-visual/backend-only code. Uses **headless Playwright** (Chromium) for discovery,
+  screenshots, a11y snapshots, and network capture via `scripts/playwright-skill-bridge.mjs`;
+  Playwright tests for the TDD loop; **Lighthouse** (headless CLI) for performance/a11y/SEO
+  scores; **@axe-core/playwright** for integrated WCAG audits; visual regression via
+  `toHaveScreenshot`. **CI-safe and AFK-safe** — no Chrome DevTools MCP, no attached GUI browser.
   When dispatched as the functional-tester agent, writes granular progress to
   `.agent-progress/` (see `references/agent-progress.md`) and emits short parent summaries
   for orchestrators.
-version: 2.1.1
+version: 2.2.0
 ---
 
 # Functional Tester
@@ -27,9 +28,10 @@ This skill covers page-level and end-to-end functional testing. For unit tests, 
 superpowers:test-driven-development. For design system compliance, use the design-reviewer
 skill.
 
-**Reliability:** If an MCP call fails, retry up to 2 times with a 3-second delay before
-escalating. All bash commands should use a 30-second timeout unless otherwise specified
-(e.g., `timeout 30 <command>` on Linux/Mac, or PowerShell `Start-Process -Wait`).
+**Reliability:** If a Playwright bridge or `npx` command fails, retry up to 2 times with a
+3-second delay before escalating. All bash commands should use a 30-second timeout unless
+otherwise specified (e.g., `timeout 30 <command>` on Linux/Mac, or PowerShell
+`Start-Process -Wait`).
 
 ---
 
@@ -110,23 +112,29 @@ If no dev server is detected on any port and no URL was provided: **STOP.** Tell
 - "Please start your dev server and tell me the URL, or say 'retry' once it is running."
 - Do NOT proceed without a confirmed dev server URL.
 
-### Check 3: chrome-devtools-mcp Connection
+### Check 3: Playwright headless smoke (bridge script)
 
-Verify the chrome-devtools-mcp server is connected and a browser page is available:
+Locate the bridge (ships with this plugin):
 
+~~~bash
+timeout 30 bash -c 'find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit 2>/dev/null'
 ~~~
-Call mcp__chrome-devtools-mcp__list_pages
+
+If not found under the workspace, **STOP** and report that the functional-tester plugin
+scripts are missing.
+
+With the dev server **BASE_URL** from Check 2, verify headless Chromium can load the page
+and return an accessibility snapshot (proves Playwright + browsers work):
+
+~~~bash
+export PW_IGNORE_HTTPS_ERRORS=1
+# Optional: export PW_STORAGE_STATE=/path/to/storage.json when auth is required
+timeout 90 node "$(find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit)" snapshot "<BASE_URL>/"
 ~~~
 
-If the call **succeeds** and returns at least one page: chrome-devtools-mcp is available.
-Proceed.
-
-If the call **fails** or returns no pages: **STOP.** Tell the user:
-
-- "chrome-devtools-mcp is not connected or no browser pages are available."
-- "This skill requires chrome-devtools-mcp for live browser inspection."
-- "Please ensure the chrome-devtools-mcp MCP server is running and a Chrome instance is connected."
-- Do NOT proceed without chrome-devtools-mcp. There is no fallback.
+If this fails (timeout, navigation error, empty snapshot on a page that should have
+content): **STOP.** Report the error. Typical fixes: install browsers
+`npx playwright install chromium`, fix BASE_URL, or provide valid `PW_STORAGE_STATE`.
 
 ### Check 4: @axe-core/playwright
 
@@ -168,13 +176,17 @@ Re-check after install. If the install fails: **STOP.** Tell the user:
 - Do NOT proceed to the Lighthouse audit step without Lighthouse, but functional tests
   (Steps 2-5) can still run.
 
-**STOP: Checks 1, 2, and 3 must ALL pass before proceeding. Check 3 (chrome-devtools-mcp) is a hard requirement with no fallback. Checks 4 and 5 are needed for audit steps but do not block functional tests.**
+**STOP: Checks 1, 2, and 3 must ALL pass before proceeding.** Check 3 validates **headless
+Playwright** (no MCP). Checks 4 and 5 are needed for audit steps but do not block functional
+tests (Steps 2–5).
 
 ---
 
 ## Phase Loading
 
 After Step 1 passes, load phase files for the remaining steps:
+
+- **`references/playwright-headless.md`** — bridge path, env vars, commands.
 
 - **Steps 2-5 (TDD Loop):** Load `phases/tdd-loop.md` — test discovery, Playwright test
   authoring with accessibility-tree selectors, visual regression via `toHaveScreenshot`,
@@ -302,9 +314,9 @@ If multiple pages were tested in this session, include a summary table:
 ## Important Boundaries
 
 1. **NEVER skip the tool check.** Playwright must be installed, a dev server must be
-   running, and chrome-devtools-mcp must be connected before any work begins.
-2. **chrome-devtools-mcp is a hard requirement.** If it is not detected in Check 3,
-   stop immediately. There is no fallback.
+   running, and Check 3 (headless bridge smoke) must pass before any work begins.
+2. **Headless Playwright only.** Do not require or invoke Chrome DevTools MCP or a visible
+   browser. Use the bridge script, Playwright tests, Lighthouse CLI, and @axe-core/playwright.
 3. **NEVER write tests without confirming the test plan with the user first.** The STOP
    gate after Step 3 is mandatory.
 4. **NEVER weaken test assertions to make them pass.** Fix the implementation instead.
@@ -332,7 +344,8 @@ If multiple pages were tested in this session, include a summary table:
     would alter user-visible behavior, API contracts, auth, caching semantics, or business outcomes.
 14. **Prefer accessibility-tree selectors** (getByRole, getByText, getByLabel) over CSS
     selectors or data-testid in all test code.
-15. **Retry MCP calls** up to 2 times with a 3-second delay before escalating failures.
+15. **Retry** failed bridge or Playwright CLI calls up to 2 times with a 3-second delay
+    before escalating.
 16. **Timeout all bash commands** at 30 seconds unless a longer timeout is specified.
 17. **Agent runs:** If `progress_log_path` is set or running under the functional-tester
     agent, follow **`references/agent-progress.md`**; sub-agent must receive the same

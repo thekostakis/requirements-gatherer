@@ -17,26 +17,16 @@ on the page for accessibility, performance, and SEO quality.
 
 ### 6a: Detect Login State
 
-Use `mcp__chrome-devtools-mcp__evaluate_script` to check if the page is behind authentication:
+Use the Playwright bridge **`probe-login`** (headless):
 
-~~~javascript
-(() => {
-  const loginSignals = [
-    document.querySelector('input[type="password"]'),
-    document.querySelector('form[action*="login"]'),
-    document.querySelector('form[action*="signin"]'),
-    document.querySelector('[data-testid*="login"]'),
-    document.querySelector('[data-testid*="signin"]'),
-  ].filter(Boolean);
-  const urlSignals = /\/(login|signin|sign-in|auth)\b/i.test(window.location.href);
-  return {
-    behindLogin: loginSignals.length > 0 || urlSignals,
-    signals: loginSignals.map(el => el.tagName + (el.type ? '[type=' + el.type + ']' : ''))
-  };
-})()
+~~~bash
+BRIDGE="$(find . -path "*/functional-tester/scripts/playwright-skill-bridge.mjs" -print -quit)"
+export PW_IGNORE_HTTPS_ERRORS=1
+timeout 90 node "$BRIDGE" probe-login "[PAGE_URL]"
 ~~~
 
-If an MCP call fails, retry up to 2 times with a 3-second delay before escalating.
+Parse stdout JSON for `behindLogin` and `signals`. Retry up to 2 times with a 3-second
+delay before escalating.
 
 If `behindLogin` is true: exclude the `seo` category from Lighthouse. Search engines cannot
 crawl authenticated pages, so SEO results would be misleading.
@@ -62,6 +52,11 @@ timeout 120 npx lighthouse [PAGE_URL] \
   --only-categories=accessibility,performance \
   --quiet
 ~~~
+
+**Lighthouse CI:** If the repo defines **`.lighthouserc.js`**, **`lighthouserc.json`**, or
+scripts using **`@lhci/cli`**, prefer the project's documented **`lhci autorun`** /
+**`npm run lighthouse`** command when it targets the same URLs — still headless, still
+CI-safe. Otherwise use the `npx lighthouse` invocations below.
 
 Parse the JSON output to extract scores and critical failures:
 
@@ -200,9 +195,15 @@ If the script is not found at that path, locate it dynamically:
 timeout 30 node "$(find . -path '*/functional-tester/scripts/parse-network-waterfall.js' -print -quit 2>/dev/null)"
 ~~~
 
-Also call `mcp__chrome-devtools-mcp__list_network_requests` to capture the live network
-waterfall for real browser timing data. If an MCP call fails, retry up to 2 times with a
-3-second delay.
+Optionally merge **live request names** from the headless bridge (same origin timing
+context as functional tests):
+
+~~~bash
+timeout 120 node "$BRIDGE" network "[PAGE_URL]" | head -c 120000
+~~~
+
+Use this JSON alongside Lighthouse's network insights. Retry up to 2 times with a 3-second
+delay on failure.
 
 Classify each API call:
 - **First-party API** — same origin as dev server, or matches patterns in project route files

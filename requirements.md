@@ -99,9 +99,9 @@ there's full traceability from requirement to defect.
 1. User invokes defect-reporter and describes a visual bug
 2. Skill collects full intake: description, expected vs actual, environment, frequency,
    any user-provided screenshots or errors
-3. Skill checks for Chrome browser tools and dev server
-4. Skill navigates to the affected page, takes screenshots
-5. Skill inspects: computed CSS, console errors, network requests, DOM structure
+3. Skill checks for Playwright, the headless bridge script, and (when known) dev server URL
+4. Skill uses the bridge to load the affected page and capture screenshots
+5. Skill inspects: computed CSS, console errors, network requests, accessibility/DOM snapshot
 6. Skill reads requirements.md to identify violated requirement/acceptance criteria
 7. Skill proposes: severity or priority, classification (defect vs story-update vs
    feature), steps to reproduce, requirement reference, root cause hypothesis
@@ -109,8 +109,8 @@ there's full traceability from requirement to defect.
 9. Skill writes temp file to `defects/defect-YYYY-MM-DD-NNN.md`
 10. Skill asks "Any other defects to report?"
 
-**Error case — Chrome tools unavailable:**
-- Skill informs user Chrome tools are not available
+**Error case — Playwright / bridge unavailable:**
+- Skill informs user headless Playwright or the bridge script is not available
 - Asks user how to proceed (provide screenshots manually, retry after setup, or cancel)
 
 **Error case — Bug not reproducible:**
