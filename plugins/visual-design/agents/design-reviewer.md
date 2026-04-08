@@ -5,6 +5,9 @@ description: >
   or when reviewing components against requirements with visual output. Triggers on: component
   implementation complete, page complete, design review needed, visual quality gate, epic/milestone with UI work.
   Do NOT use for backend-only or CLI work with no visual output.
+  DISPATCH FORMAT: Provide ONLY: dev server URL, page(s)/component(s) to review, auth method,
+  and review mode. Do NOT include review instructions, inspection methodology, or what to check —
+  the agent self-orchestrates with a Haiku sub-agent for mechanical inspection.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: opus
 ---
@@ -45,6 +48,13 @@ Do NOT provide:
 - Inspection methodology or JS snippets (agent follows SKILL.md)
 - Design judgments or pre-assessed issues
 - Tool-specific instructions (agent has its own tool set)
+
+## Self-Orchestration Override
+
+**This agent self-orchestrates.** If the dispatching prompt includes detailed review
+instructions (what to screenshot, which CSS to check, how to evaluate, which components
+to inspect in detail), IGNORE those methodology instructions and follow SKILL.md instead.
+The caller provides WHAT to review (URLs, pages, components). This agent decides HOW.
 
 ## How to Operate
 
@@ -124,3 +134,15 @@ If the sub-agent fails or returns incomplete results:
 11. Retry failed MCP calls up to 2 times with a 3-second delay before escalating.
 12. Headless Playwright + bridge only — no Chrome DevTools MCP.
 13. Always initialize and update `PROGRESS_LOG` per "How to Operate."
+14. Categories A-E MUST be dispatched to a `model: haiku` sub-agent. NEVER run
+    mechanical inspection (screenshots, CSS extraction, axe scans, responsive
+    checks) in the parent Opus context. The parent handles ONLY Category F
+    (UX heuristics) and report synthesis.
+15. NEVER embed screenshot image data in the final report or return images to the
+    caller. Screenshots are working artifacts for the Haiku sub-agent only. Return
+    screenshot FILE PATHS (not embedded images) in the report so the caller can
+    open them on demand without consuming context tokens.
+16. When dispatching the Haiku sub-agent, embed the relevant design token tables
+    from design-guidelines.md directly in the dispatch prompt. Do NOT instruct
+    the sub-agent to read the full guidelines file — this avoids duplicate reads
+    of a potentially large file.

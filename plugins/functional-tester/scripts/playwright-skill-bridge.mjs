@@ -44,7 +44,7 @@ async function withPage(chromium, url, fn, { waitUntil = 'domcontentloaded' } = 
 function help() {
   console.error(`playwright-skill-bridge.mjs — headless Chromium via Playwright
   snapshot <url>              — accessibility tree JSON (stdout)
-  screenshot <url> <out.png> [w] [h] — full-page PNG
+  screenshot <url> <out.png> [w] [h] [--full-page] — viewport PNG (or full-page with flag)
   network <url>               — request log JSON (first 500 reqs)
   probe-login <url>           — { behindLogin, signals } JSON
   run <url> <module.mjs>      — default export async (page, context) => any`);
@@ -71,12 +71,14 @@ async function main() {
 
   if (cmd === 'screenshot') {
     const out = rest[0];
-    const w = rest[1] ? parseInt(rest[1], 10) : 1280;
-    const h = rest[2] ? parseInt(rest[2], 10) : 720;
-    if (!out) throw new Error('screenshot requires output path');
+    const fullPageFlag = rest.includes('--full-page');
+    const numArgs = rest.filter((a) => a !== '--full-page');
+    const w = numArgs[1] ? parseInt(numArgs[1], 10) : 1280;
+    const h = numArgs[2] ? parseInt(numArgs[2], 10) : 720;
+    if (!out || out === '--full-page') throw new Error('screenshot requires output path');
     await withPage(chromium, url, async (page) => {
       await page.setViewportSize({ width: w, height: h });
-      await page.screenshot({ path: out, fullPage: true });
+      await page.screenshot({ path: out, fullPage: fullPageFlag });
     });
     console.log(JSON.stringify({ ok: true, path: path.resolve(out) }));
     return;
