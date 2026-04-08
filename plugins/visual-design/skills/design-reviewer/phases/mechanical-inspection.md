@@ -34,6 +34,38 @@ sub-agent performs **most** appends; the opus parent appends milestones only.
 
 ---
 
+## Screenshot Efficiency Rules
+
+These rules apply to ALL categories (A-E):
+
+1. **Capture once, reference many.** Before taking a screenshot, check if an identical
+   capture exists (same URL + viewport size + interaction state). Reuse existing files
+   instead of recapturing. Use the naming convention: `{page}-{viewport}-{state}.png`
+   (e.g., `settings-1280-default.png`, `settings-375-hover.png`).
+
+2. **Viewport-only for mechanical checks.** Use `fullPage: false` for Categories A-E
+   screenshots. Full-page captures are unnecessary for CSS property extraction and
+   axe scans — they inflate image size by 3-5x.
+
+3. **Single viewport loop.** Categories B (CSS compliance) and E (responsive) MUST share
+   a single viewport loop. For each breakpoint (375, 768, 1024, 1440):
+   - Take ONE screenshot (viewport-only)
+   - Extract computed styles (Category B check)
+   - Check overflow and touch targets (Category E check)
+   - Save results keyed by viewport width
+   Do NOT loop through viewports separately for B and E.
+
+4. **Computed styles: deviations only.** When extracting CSS properties, compare against
+   the design token values provided in the dispatch. Only report properties that DIFFER
+   from the expected token values. Do not report matching properties.
+
+5. **Axe results: summary + top violations.** Report axe scan results as:
+   - Total violation count by severity (critical, serious, moderate, minor)
+   - Full details for the top 5 most severe violations only
+   - Do NOT serialize the complete axe JSON output
+
+---
+
 ## Consultant Synergy
 
 If `design/review-checklist.md` exists (produced by the visual-design-consultant skill),
@@ -101,6 +133,9 @@ Run all five inspection categories against each component under review.
 Use **`node "$BRIDGE" run "$PAGE_URL" ./tmp-cat-a.mjs`** (write the module per step). The
 default export receives `page` already on `PAGE_URL`.
 
+Before capturing a new screenshot, check if `{page}-{viewport}-{state}.png` already exists
+in the screenshots directory. If it does, reference it instead of recapturing.
+
 1. Default state: `await page.screenshot({ path: '.agent-progress/cat-a-default.png' })`.
 2. Hover: `await page.hover(selector)` then screenshot to `.agent-progress/cat-a-hover.png`.
 3. Focus: `await page.focus(selector)` then screenshot to `.agent-progress/cat-a-focus.png`.
@@ -155,11 +190,18 @@ default export receives `page` already on `PAGE_URL`.
 
 #### Category E: Responsive Behavior
 
+**This category shares a viewport loop with Category B** per the Screenshot Efficiency
+Rules above. Do NOT run a separate viewport loop. Consume the per-viewport data (screenshots,
+computed styles, overflow/touch-target results) already captured during the shared B+E loop.
+
+If the shared loop has not yet run (e.g., Category B was skipped), run it here using the
+combined procedure below.
+
 1. Read the Responsive System section from `design-guidelines.md` to determine breakpoints
    or fluid scale definitions.
-2. Use a **`run` module** that loops viewports `375, 768, 1024, 1440` (or guideline
-   breakpoints): for each, `await page.setViewportSize({ width, height })`, screenshot,
-   re-run Category B extraction, and `page.evaluate` the overflow/touch-target script:
+2. The shared viewport loop (375, 768, 1024, 1440 or guideline breakpoints) captures for
+   each breakpoint: ONE screenshot (viewport-only), computed styles (Category B), and the
+   overflow/touch-target `page.evaluate` (Category E). Use results keyed by viewport width:
 
 ~~~javascript
 // Inside page.evaluate after sizing:

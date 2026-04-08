@@ -35,6 +35,15 @@ Run at both desktop (1280px) and mobile (375px) viewports. Use a **`run` module*
 `page.setViewportSize` to switch sizes and `page.screenshot` (or the `screenshot` bridge
 command with width/height args) to capture state at each viewport.
 
+### Screenshot Reuse from Mechanical Inspection
+
+Reuse screenshots from the mechanical inspection (Categories A/E) for the current page.
+Only take NEW screenshots if:
+- The required viewport/state combination was not captured by Categories A-E
+- An interaction state is needed that mechanical inspection did not test (e.g., multi-step flow)
+
+Reference screenshots by file path in the report, do not embed image data.
+
 ### Nielsen's Heuristic Framework
 
 Evaluate the page against each of Nielsen's 10 usability heuristics. Score each
@@ -253,6 +262,10 @@ experiences at any viewport as **BLOCKING**.
 
 When the dispatch context indicates this is a follow-up review and a previous report
 was found during Check 3 of the main SKILL.md:
+
+In diff mode, only capture screenshots for areas that the previous report flagged as
+BLOCKING. Do not re-screenshot areas that previously passed. Reference the previous
+report's findings by issue ID instead of re-embedding full descriptions.
 
 ### Step 1: Load Previous Report
 
