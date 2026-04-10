@@ -31,9 +31,17 @@ commands up to **2** times with a **3-second** delay.
 node "$BRIDGE" screenshot "<PAGE_URL>" "defects/evidence/visual-<short-label>.png" 1280 720
 ~~~
 
+After capture, record the PNG path so it can be added to the defect file's `## Attachments`
+list in Step 11. Track paths in a running list; do not write them anywhere on disk until
+Step 11 assembles the final defect report.
+
 3. **Accessibility / structure snapshot** — `node "$BRIDGE" snapshot "<PAGE_URL>"` for a
    structured tree (roles, names). Use it like a DOM-oriented map when interpreting layout
    bugs.
+
+If you save the snapshot output to a file under `defects/evidence/` (e.g. for later review),
+record that path for the `## Attachments` list. If you only use the result in-session, do
+not add it.
 
 4. **Computed styles** — Use `run` with a small module under `defects/evidence/`. Replace
    `SELECTOR` with a stable CSS selector for the affected element (from user description or
@@ -71,6 +79,9 @@ export default async function (page) {
 node "$BRIDGE" run "<PAGE_URL>" "defects/evidence/computed-styles.mjs"
 ~~~
 
+Save any JSON output worth preserving under `defects/evidence/<descriptive-name>.json` and
+record the path for the `## Attachments` list.
+
 5. **Console messages** — Collect JS errors/warnings after a reload (attach listener before
    `reload`):
 
@@ -95,12 +106,16 @@ export default async function (page) {
 node "$BRIDGE" run "<PAGE_URL>" "defects/evidence/console-capture.mjs"
 ~~~
 
+Save any JSON output worth preserving under `defects/evidence/<descriptive-name>.json` and
+record the path for the `## Attachments` list.
+
 6. **Network** — `node "$BRIDGE" network "<PAGE_URL>"` for request URLs, methods, and
    resource types (failed status codes are not always in this log; correlate with user
    reports and server logs).
 
 Use findings from these steps to build reproduction steps and evidence. Reference screenshot
-paths and JSON summaries in the report.
+paths and JSON summaries in the human-readable `## Evidence` section of the report, and add
+every produced file path to the machine-readable `## Attachments` list (see §OutputFormat).
 
 ### If Playwright or `BRIDGE` is NOT available
 
@@ -115,6 +130,8 @@ Then:
 2. Ask for screenshots if they have any.
 3. Ask whether they see any errors in the browser console.
 4. Build reproduction steps from the user's description alone.
+
+In this path the `## Attachments` list in the defect report will be empty.
 
 **NEVER silently skip this notification.** The user must know that visual inspection is
 degraded.
