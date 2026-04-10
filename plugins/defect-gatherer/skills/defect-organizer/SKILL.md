@@ -154,6 +154,61 @@ This gate is NON-NEGOTIABLE.**
 
 ---
 
+## Step 4.5: Attachment Upload Tool Check
+
+**Trigger:** This step runs only if at least one defect in the submission plan has a
+non-empty `## Attachments` list. If every defect has zero attachments, skip directly to
+Step 5.
+
+**Gate logic by platform:**
+
+### GitHub
+Verify the `release` subcommand is available:
+
+```bash
+gh release --help >/dev/null 2>&1 && echo "AVAILABLE" || echo "MISSING"
+```
+
+If MISSING, fall through to the "Upload unavailable" prompt below.
+
+### Jira
+Check whether any Atlassian MCP tool matching `addAttachment` or `createAttachment` is
+exposed in the current session. If no such tool exists, fall through to the "Upload
+unavailable" prompt below.
+
+### Linear / GitLab
+No attachment upload is implemented in this plugin version. Do NOT prompt. Instead, add
+this line verbatim to every issue body for defects with attachments:
+
+```
+_Note: attachment upload is supported on GitHub and Jira in this plugin version. The
+attachment paths below are listed for manual upload._
+```
+
+Then proceed directly to Step 5.
+
+### Upload unavailable prompt (GitHub / Jira only)
+
+If the gate fails for GitHub or Jira, tell the user exactly:
+
+> "Attachment upload is unavailable on [platform]: [specific reason, e.g. 'gh release
+> subcommand not found' or 'no Atlassian MCP attachment tool exposed']. You can either:
+> (1) proceed with text-only issues (screenshot paths listed but not uploaded), or
+> (2) abort and fix the tooling before re-running.
+> Which would you like?"
+
+**STOP. Wait for explicit user choice.**
+
+- "proceed" / "text only" / "skip attachments" / "1" → set session flag
+  `attachments_disabled = true`, continue to Step 5.
+- "abort" / "cancel" / "2" → stop without creating any issues. All files remain in
+  `defects/`.
+- Anything else → re-present the prompt.
+
+**This gate is NON-NEGOTIABLE.** Never silently skip attachment upload.
+
+---
+
 ## Step 5: Create Issues
 
 Only after explicit user confirmation, create everything in this EXACT order.
