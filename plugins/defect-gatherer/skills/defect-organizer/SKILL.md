@@ -540,3 +540,9 @@ and correct before continuing.
    be clearly distinguishable in the system of record.
 9. **Always link to requirements.** Every submitted issue must reference the violated
    requirement (if one was identified in the defect report).
+10. **NEVER silently skip attachment upload.** If the upload path is unavailable on the
+    selected platform, the Step 4.5 gate must fire and the user must explicitly choose
+    to proceed text-only or abort.
+11. **NEVER upload files outside `defects/`.** Attachment paths parsed from the
+    `## Attachments` block must be validated to start with `defects/` before upload.
+    Absolute paths, `..` escapes, and paths outside `defects/` are warn-skipped.
