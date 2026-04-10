@@ -1,7 +1,7 @@
 {
   "name": "defect-gatherer",
-  "version": "1.2.3",
-  "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via headless Playwright (visual bugs; plugin bridge script, CI-safe) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability.",
+  "version": "1.3.0",
+  "description": "Defect reporting and submission workflow with dispatch contract support. Reporter skill conducts structured interviews, auto-generates reproduction steps via headless Playwright (visual bugs; plugin bridge script, CI-safe) or code tracing (API bugs), cross-references requirements, and classifies as true defect, story update, or feature request. Supports dispatch from orchestrators with page URL (visual) or API endpoint identity (non-visual). Organizer skill submits to GitHub, Jira, Linear, or GitLab with system-native formatting and requirement traceability. Screenshot attachments upload to GitHub (shared defect-evidence release) and Jira (native attachments) with inline rendering.",
   "author": {
     "name": "Chris Kostakis"
   },

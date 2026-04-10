@@ -37,7 +37,20 @@ You may NOT proceed past a STOP gate until the condition is met.
    - Total defects found
    - For each defect: ID, title, classification (defect, story-update, or feature),
      severity (defects/story-updates) or priority (features)
-5. Also check for `requirements.md` in the working directory — if it exists, read it
+5. For each defect file, also parse its `## Attachments` section:
+   - Find the section heading `## Attachments`.
+   - Collect every line that begins with `- ` (a dash followed by a space) until the next
+     `## ` heading or EOF.
+   - For each collected line, strip the leading `- ` to get the raw path.
+   - Validate each path:
+     - Must start with `defects/` (prevents absolute paths and `..` escapes).
+     - Must resolve to an existing file (check with `test -f <path>`).
+   - If the path is invalid or missing, record a warning with the defect ID and path; do
+     NOT add it to the attachment list for that defect.
+   - Store the validated list as `attachments[<defect_id>] = [path1, path2, ...]`.
+   - If the `## Attachments` section is missing, absent, or contains only the HTML comment,
+     `attachments[<defect_id>]` is an empty list. This is not an error.
+6. Also check for `requirements.md` in the working directory — if it exists, read it
    for context (requirement references, feature areas, acceptance criteria).
 
 **STOP: Confirm the defect list with the user before proceeding.**
@@ -141,12 +154,85 @@ This gate is NON-NEGOTIABLE.**
 
 ---
 
+## Step 4.5: Attachment Upload Tool Check
+
+**Trigger:** This step runs only if at least one defect in the submission plan has a
+non-empty `## Attachments` list. If every defect has zero attachments, skip directly to
+Step 5.
+
+**Gate logic by platform:**
+
+### GitHub
+Verify the `release` subcommand is available:
+
+```bash
+gh release --help >/dev/null 2>&1 && echo "AVAILABLE" || echo "MISSING"
+```
+
+If MISSING, fall through to the "Upload unavailable" prompt below.
+
+### Jira
+Check whether any Atlassian MCP tool matching `addAttachment` or `createAttachment` is
+exposed in the current session. If no such tool exists, fall through to the "Upload
+unavailable" prompt below.
+
+### Linear / GitLab
+No attachment upload is implemented in this plugin version. Do NOT prompt. Instead, add
+this line verbatim to every issue body for defects with attachments:
+
+```
+_Note: attachment upload is supported on GitHub and Jira in this plugin version. The
+attachment paths below are listed for manual upload._
+```
+
+Then proceed directly to Step 5.
+
+### Upload unavailable prompt (GitHub / Jira only)
+
+If the gate fails for GitHub or Jira, tell the user exactly:
+
+> "Attachment upload is unavailable on [platform]: [specific reason, e.g. 'gh release
+> subcommand not found' or 'no Atlassian MCP attachment tool exposed']. You can either:
+> (1) proceed with text-only issues (screenshot paths listed but not uploaded), or
+> (2) abort and fix the tooling before re-running.
+> Which would you like?"
+
+**STOP. Wait for explicit user choice.**
+
+- "proceed" / "text only" / "skip attachments" / "1" → set session flag
+  `attachments_disabled = true`, continue to Step 5.
+- "abort" / "cancel" / "2" → stop without creating any issues. All files remain in
+  `defects/`.
+- Anything else → re-present the prompt.
+
+**This gate is NON-NEGOTIABLE.** Never silently skip attachment upload.
+
+---
+
 ## Step 5: Create Issues
 
 Only after explicit user confirmation, create everything in this EXACT order.
 Do not skip or reorder these sub-steps. Verify each sub-step before moving to the next.
 
 ### 5a. GitHub Issue Creation
+
+**Sub-step 5a.0: Ensure evidence release exists**
+
+Run this ONCE per session, before any issue creation. Skip entirely if `attachments_disabled`
+is true or if every defect has an empty attachment list.
+
+```bash
+gh release view defect-evidence --repo OWNER/REPO >/dev/null 2>&1 || \
+  gh release create defect-evidence \
+    --repo OWNER/REPO \
+    --title "Defect evidence" \
+    --notes "Screenshots and capture artifacts from the defect-gatherer plugin. Not a product release." \
+    --target "$(gh api repos/OWNER/REPO --jq .default_branch)"
+```
+
+The release is published (not a draft) so assets render for anyone who can read the repo.
+If this command fails, treat it as "upload tool unavailable" — go back to Step 4.5 and
+prompt the user to proceed text-only or abort.
 
 **Sub-step 5a.1: Create labels (if they don't exist)**
 
@@ -164,6 +250,33 @@ If the submission plan includes new milestones:
 ```
 gh api repos/OWNER/REPO/milestones -f title="[Name]" -f description="[desc]" -f state="open"
 ```
+
+**Sub-step 5a.2b: Upload defect attachments to shared release**
+
+For each defect with a non-empty attachments list (and `attachments_disabled` is false),
+upload each file to the shared release using the defect ID as a filename prefix:
+
+```bash
+gh release upload defect-evidence \
+  --repo OWNER/REPO \
+  --clobber \
+  "<local-path>#<defect-id>--<basename>"
+```
+
+Rules:
+- `<defect-id>` is the filename stem of the defect file without the `defect-` prefix and
+  `.md` extension — e.g. `defect-2026-04-10-001.md` → `2026-04-10-001`.
+- `<basename>` is the basename of the local path.
+- Full asset name format: `defect-<defect-id>--<basename>`.
+- `--clobber` replaces any existing asset with the same name (safe for re-runs).
+- If the local file is missing at upload time (should not happen because Step 1 validated,
+  but defensively re-check), warn with defect ID and path, record in session
+  `upload_failures` list, skip that one entry, continue.
+- On network/permission error, retry once. On second failure, record in session
+  `upload_failures`, continue.
+
+For each successful upload, record
+`uploaded_assets[<defect_id>].append({filename: "<asset-name>", url: "https://github.com/OWNER/REPO/releases/download/defect-evidence/<asset-name>", basename: "<basename>"})`.
 
 **Sub-step 5a.3: Create issues (one at a time, in order)**
 
@@ -198,8 +311,8 @@ Issue body template for defects:
 ## Actual Behavior
 [From defect report]
 
-## Evidence
-[Screenshots, console errors, network failures, CSS issues]
+## Attachments
+[ATTACHMENTS_BLOCK]
 
 ## Environment
 [Browser, OS, dev server URL]
@@ -243,6 +356,9 @@ Issue body template for story updates:
 ## Story Impact
 [From defect report — which Epic/Story needs updating]
 
+## Attachments
+[ATTACHMENTS_BLOCK]
+
 ## Steps to Verify
 1. [Step]
 2. [Step]
@@ -284,6 +400,9 @@ Issue body template for features:
 ## Suggested Behavior
 [How the feature should work based on user's description and existing patterns]
 
+## Attachments
+[ATTACHMENTS_BLOCK]
+
 ## Requirements Impact
 This feature should be added to requirements under [Epic/Section].
 Requirements.md should be updated to include this functionality.
@@ -296,6 +415,29 @@ _Filed via defect-gatherer plugin_
 _Source: [defect file ID]_
 ```
 
+**Building `[ATTACHMENTS_BLOCK]`:**
+
+For the defect being submitted, look up its entry in `uploaded_assets`. Build the block
+as follows:
+
+- If `attachments_disabled` is true OR the entry is empty OR does not exist, substitute
+  the original free-text Evidence content from the defect file's human-readable `## Evidence`
+  section. This preserves backward compatibility with defects filed before the Attachments
+  block existed.
+- Otherwise, for each uploaded asset:
+  - If the basename ends with `.png`, `.jpg`, `.jpeg`, `.gif`, or `.webp` (case-insensitive),
+    emit `![<basename>](<url>)`.
+  - Otherwise, emit `[<basename>](<url>)`.
+  - One entry per line, separated by blank lines so GitHub renders each inline image
+    cleanly.
+
+If any uploads for this defect ended up in `upload_failures`, append a final line to the
+block:
+
+```
+_Upload failures: <count>. See session summary for details._
+```
+
 **Sub-step 5a.4: Verify**
 
 ```
@@ -303,6 +445,16 @@ gh issue list --repo OWNER/REPO --state open --limit 100
 ```
 
 Confirm all issues have milestones and correct labels.
+
+Additionally, if any attachments were uploaded in Sub-step 5a.2b, verify them now:
+
+```bash
+gh release view defect-evidence --repo OWNER/REPO --json assets \
+  --jq '.assets[].name' | sort > /tmp/actual-assets.txt
+```
+
+Diff against the expected asset names collected during upload. Any missing names are
+added to session `upload_failures` with reason "not found on release after upload".
 
 ### 5b/5c/5d. Jira, Linear, GitLab Issue Creation
 
@@ -352,6 +504,11 @@ After all issues are created, archived, and verified, output this summary:
 |-----------|-------|-------|
 | [id] | [title] | [error description] |
 
+### Attachment Upload Failures (if any)
+| Defect ID | Attachment | Reason |
+|-----------|------------|--------|
+| [id] | [basename or path] | [error description] |
+
 ### Files Archived
 - [list of files moved to defects/.archived/]
 
@@ -389,3 +546,9 @@ and correct before continuing.
    be clearly distinguishable in the system of record.
 9. **Always link to requirements.** Every submitted issue must reference the violated
    requirement (if one was identified in the defect report).
+10. **NEVER silently skip attachment upload.** If the upload path is unavailable on the
+    selected platform, the Step 4.5 gate must fire and the user must explicitly choose
+    to proceed text-only or abort.
+11. **NEVER upload files outside `defects/`.** Attachment paths parsed from the
+    `## Attachments` block must be validated to start with `defects/` before upload.
+    Absolute paths, `..` escapes, and paths outside `defects/` are warn-skipped.

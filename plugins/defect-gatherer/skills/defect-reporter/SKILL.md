@@ -382,6 +382,14 @@ ls defects/defect-*.md 2>/dev/null | sort | tail -1
 3. Write to `defects/defect-YYYY-MM-DD-NNN.md` using today's date and the next sequential
    number.
 
+### Attachments List
+
+When writing the file, populate the `## Attachments` section with every capture path you
+tracked during §Visual investigation. One path per line, relative to the repo root. If
+you produced no captures (API path, or visual path with Playwright unavailable), leave the
+list empty — the section header and comment must still be present so downstream tooling
+sees a well-formed block.
+
 ### Output Format
 
 Load `phases/investigation.md §OutputFormat` for the exact file template.
