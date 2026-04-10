@@ -498,6 +498,11 @@ After all issues are created, archived, and verified, output this summary:
 |-----------|-------|-------|
 | [id] | [title] | [error description] |
 
+### Attachment Upload Failures (if any)
+| Defect ID | Attachment | Reason |
+|-----------|------------|--------|
+| [id] | [basename or path] | [error description] |
+
 ### Files Archived
 - [list of files moved to defects/.archived/]
 
