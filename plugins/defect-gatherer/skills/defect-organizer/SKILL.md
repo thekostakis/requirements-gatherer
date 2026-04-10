@@ -216,6 +216,24 @@ Do not skip or reorder these sub-steps. Verify each sub-step before moving to th
 
 ### 5a. GitHub Issue Creation
 
+**Sub-step 5a.0: Ensure evidence release exists**
+
+Run this ONCE per session, before any issue creation. Skip entirely if `attachments_disabled`
+is true or if every defect has an empty attachment list.
+
+```bash
+gh release view defect-evidence --repo OWNER/REPO >/dev/null 2>&1 || \
+  gh release create defect-evidence \
+    --repo OWNER/REPO \
+    --title "Defect evidence" \
+    --notes "Screenshots and capture artifacts from the defect-gatherer plugin. Not a product release." \
+    --target "$(gh api repos/OWNER/REPO --jq .default_branch)"
+```
+
+The release is published (not a draft) so assets render for anyone who can read the repo.
+If this command fails, treat it as "upload tool unavailable" — go back to Step 4.5 and
+prompt the user to proceed text-only or abort.
+
 **Sub-step 5a.1: Create labels (if they don't exist)**
 
 Create these labels if they don't already exist:
@@ -232,6 +250,33 @@ If the submission plan includes new milestones:
 ```
 gh api repos/OWNER/REPO/milestones -f title="[Name]" -f description="[desc]" -f state="open"
 ```
+
+**Sub-step 5a.2b: Upload defect attachments to shared release**
+
+For each defect with a non-empty attachments list (and `attachments_disabled` is false),
+upload each file to the shared release using the defect ID as a filename prefix:
+
+```bash
+gh release upload defect-evidence \
+  --repo OWNER/REPO \
+  --clobber \
+  "<local-path>#<defect-id>--<basename>"
+```
+
+Rules:
+- `<defect-id>` is the filename stem of the defect file without the `defect-` prefix and
+  `.md` extension — e.g. `defect-2026-04-10-001.md` → `2026-04-10-001`.
+- `<basename>` is the basename of the local path.
+- Full asset name format: `defect-<defect-id>--<basename>`.
+- `--clobber` replaces any existing asset with the same name (safe for re-runs).
+- If the local file is missing at upload time (should not happen because Step 1 validated,
+  but defensively re-check), warn with defect ID and path, record in session
+  `upload_failures` list, skip that one entry, continue.
+- On network/permission error, retry once. On second failure, record in session
+  `upload_failures`, continue.
+
+For each successful upload, record
+`uploaded_assets[<defect_id>].append({filename: "<asset-name>", url: "https://github.com/OWNER/REPO/releases/download/defect-evidence/<asset-name>", basename: "<basename>"})`.
 
 **Sub-step 5a.3: Create issues (one at a time, in order)**
 
@@ -266,8 +311,8 @@ Issue body template for defects:
 ## Actual Behavior
 [From defect report]
 
-## Evidence
-[Screenshots, console errors, network failures, CSS issues]
+## Attachments
+[ATTACHMENTS_BLOCK]
 
 ## Environment
 [Browser, OS, dev server URL]
@@ -364,6 +409,29 @@ _Filed via defect-gatherer plugin_
 _Source: [defect file ID]_
 ```
 
+**Building `[ATTACHMENTS_BLOCK]`:**
+
+For the defect being submitted, look up its entry in `uploaded_assets`. Build the block
+as follows:
+
+- If `attachments_disabled` is true OR the entry is empty OR does not exist, substitute
+  the original free-text Evidence content from the defect file's human-readable `## Evidence`
+  section. This preserves backward compatibility with defects filed before the Attachments
+  block existed.
+- Otherwise, for each uploaded asset:
+  - If the basename ends with `.png`, `.jpg`, `.jpeg`, `.gif`, or `.webp` (case-insensitive),
+    emit `![<basename>](<url>)`.
+  - Otherwise, emit `[<basename>](<url>)`.
+  - One entry per line, separated by blank lines so GitHub renders each inline image
+    cleanly.
+
+If any uploads for this defect ended up in `upload_failures`, append a final line to the
+block:
+
+```
+_Upload failures: <count>. See session summary for details._
+```
+
 **Sub-step 5a.4: Verify**
 
 ```
@@ -371,6 +439,16 @@ gh issue list --repo OWNER/REPO --state open --limit 100
 ```
 
 Confirm all issues have milestones and correct labels.
+
+Additionally, if any attachments were uploaded in Sub-step 5a.2b, verify them now:
+
+```bash
+gh release view defect-evidence --repo OWNER/REPO --json assets \
+  --jq '.assets[].name' | sort > /tmp/actual-assets.txt
+```
+
+Diff against the expected asset names collected during upload. Any missing names are
+added to session `upload_failures` with reason "not found on release after upload".
 
 ### 5b/5c/5d. Jira, Linear, GitLab Issue Creation
 
