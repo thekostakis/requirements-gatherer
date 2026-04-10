@@ -356,6 +356,9 @@ Issue body template for story updates:
 ## Story Impact
 [From defect report — which Epic/Story needs updating]
 
+## Attachments
+[ATTACHMENTS_BLOCK]
+
 ## Steps to Verify
 1. [Step]
 2. [Step]
@@ -396,6 +399,9 @@ Issue body template for features:
 
 ## Suggested Behavior
 [How the feature should work based on user's description and existing patterns]
+
+## Attachments
+[ATTACHMENTS_BLOCK]
 
 ## Requirements Impact
 This feature should be added to requirements under [Epic/Section].
