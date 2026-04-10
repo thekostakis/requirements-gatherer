@@ -37,7 +37,20 @@ You may NOT proceed past a STOP gate until the condition is met.
    - Total defects found
    - For each defect: ID, title, classification (defect, story-update, or feature),
      severity (defects/story-updates) or priority (features)
-5. Also check for `requirements.md` in the working directory — if it exists, read it
+5. For each defect file, also parse its `## Attachments` section:
+   - Find the section heading `## Attachments`.
+   - Collect every line that begins with `- ` (a dash followed by a space) until the next
+     `## ` heading or EOF.
+   - For each collected line, strip the leading `- ` to get the raw path.
+   - Validate each path:
+     - Must start with `defects/` (prevents absolute paths and `..` escapes).
+     - Must resolve to an existing file (check with `test -f <path>`).
+   - If the path is invalid or missing, record a warning with the defect ID and path; do
+     NOT add it to the attachment list for that defect.
+   - Store the validated list as `attachments[<defect_id>] = [path1, path2, ...]`.
+   - If the `## Attachments` section is missing, absent, or contains only the HTML comment,
+     `attachments[<defect_id>]` is an empty list. This is not an error.
+6. Also check for `requirements.md` in the working directory — if it exists, read it
    for context (requirement references, feature areas, acceptance criteria).
 
 **STOP: Confirm the defect list with the user before proceeding.**
