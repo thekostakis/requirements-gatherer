@@ -192,6 +192,10 @@ _Reproduced: [Yes | No -- filed at user's request]_
 - Network failures: [if any]
 - CSS issues: [if any]
 
+## Attachments
+<!-- Machine-readable list for defect-organizer. One path per line, relative to repo root. Paths may point to any file type; images render inline in tickets, other files are linked. -->
+- [path relative to repo root, e.g. defects/evidence/visual-login-button-2026-04-10.png]
+
 ## Requirement Reference
 - **Requirement**: [Section/feature from requirements.md]
 - **Acceptance Criteria**: [Specific criteria violated]
